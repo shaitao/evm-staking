@@ -10,7 +10,17 @@ interface ISystem {
 
     function getValidatorInfoList() external returns (ValidatorInfo[] memory);
 
-    function blockTrigger(address proposer, address[] memory signed) external;
+    enum ByztineBehavior {
+        DoubleVote,
+        Unknown
+    }
+
+    function blockTrigger(
+        address proposer,
+        address[] memory signed,
+        address[] memory byztine,
+        ByztineBehavior[] memory behavior
+    ) external;
 
     struct ClaimOps {
         address addr;
@@ -19,4 +29,3 @@ interface ISystem {
 
     function getClaimOps() external returns (ClaimOps[] memory);
 }
-
