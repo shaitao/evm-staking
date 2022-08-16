@@ -1,16 +1,62 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import "./interfaces/ISystem.sol";
+import "./Power.sol";
+import "./interfaces/Interfaces.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract System {
-    mapping(address => uint256) powers;
+contract System is Ownable {
+    // address of proxy contract
+    address public proxy_contract;
 
-    mapping(address => bytes) pubkeys;
+    // Staking contract address
+    address public stakingAddress;
 
-    function addPower(address validator, uint256 power) public {}
+    // Reword contract address
+    address public rewardAddress;
 
-    function descPower(address validator, uint256 power) public {}
+    // Validator power
+    //    mapping(address => uint256) powers;
 
-    function blockTrigger() public {}
+    // Validator public key
+    //    mapping(address => bytes) pubKeys;
+
+    /**
+     * @dev constructor function, for init proxy_contract.
+     * @param _proxy_contract address of proxy contract.
+     */
+    constructor(address _proxy_contract) {
+        proxy_contract = _proxy_contract;
+    }
+
+    modifier onlyProxy() {
+        require(
+            msg.sender == proxy_contract,
+            "Only proxy can call this function"
+        );
+        _;
+    }
+
+    function adminSetStakingAddress(
+        address stakingAddress_,
+        address rewardAddress_
+    ) public onlyOwner {
+        rewardAddress = rewardAddress_;
+        stakingAddress = stakingAddress_;
+    }
+
+    function adminSetRewardAddress(
+        address stakingAddress_,
+        address rewardAddress_
+    ) public onlyOwner {
+        rewardAddress = rewardAddress_;
+        stakingAddress = stakingAddress_;
+    }
+
+    // trigger events at end-block
+    function blockTrigger() public onlyProxy {
+        // Return unDelegate assets
+        Staking staking = Staking(stakingAddress);
+        staking.trigger();
+    }
 }
