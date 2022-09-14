@@ -3,8 +3,8 @@ pragma solidity ^0.8.9;
 
 import "./Power.sol";
 import "./Staking.sol";
+import "./Reward.sol";
 import "./interfaces/ISystem.sol";
-
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract System is Ownable, ISystem {
@@ -20,6 +20,9 @@ contract System is Ownable, ISystem {
     address public rewardAddress;
 
     address public powerAddress;
+
+    // Validator-info set Maximum length
+    uint256 public validatorSetMaximum;
 
     /**
      * @dev constructor function, for init proxy_contract.
@@ -37,30 +40,26 @@ contract System is Ownable, ISystem {
         _;
     }
 
-    function adminSetStakingAddress(
-        address stakingAddress_,
-        address rewardAddress_
-    ) public onlyOwner {
-        rewardAddress = rewardAddress_;
+    function adminSetStakingAddress(address stakingAddress_) public onlyOwner {
         stakingAddress = stakingAddress_;
     }
 
-    function adminSetRewardAddress(
-        address stakingAddress_,
-        address rewardAddress_
-    ) public onlyOwner {
+    function adminSetRewardAddress(address rewardAddress_) public onlyOwner {
         rewardAddress = rewardAddress_;
-        stakingAddress = stakingAddress_;
     }
 
-    function adminSetPowerAddress(
-        address stakingAddress_,
-        address rewardAddress_
-    ) public onlyOwner {
-        rewardAddress = rewardAddress_;
-        stakingAddress = stakingAddress_;
+    function adminSetPowerAddress(address powerAddress_) public onlyOwner {
+        powerAddress = powerAddress_;
     }
 
+    function adminSetValidatorSetMaximum(uint256 validatorSetMaximum_)
+        public
+        onlyOwner
+    {
+        validatorSetMaximum = validatorSetMaximum_;
+    }
+
+    // Validator info
     function getValidatorInfoList()
         external
         view
@@ -74,6 +73,12 @@ contract System is Ownable, ISystem {
         Power pc = Power(powerAddress);
 
         ValidatorInfo[] memory vs = new ValidatorInfo[](addrs.length);
+        ValidatorInfo[] memory vsRes;
+        if (addrs.length > validatorSetMaximum) {
+            vsRes = new ValidatorInfo[](validatorSetMaximum);
+        } else {
+            vsRes = new ValidatorInfo[](addrs.length);
+        }
 
         for (uint256 i = 0; i != addrs.length; i++) {
             address validator = addrs[i];
@@ -89,18 +94,62 @@ contract System is Ownable, ISystem {
             vs[i] = v;
         }
 
-        return vs;
+        ValidatorInfo[] memory vsDesc = descSort(vs);
+
+        for (uint256 i = 0; i != vsDesc.length; i++) {
+            if (i >= validatorSetMaximum) {
+                break;
+            }
+            vsRes[i] = vsDesc[i];
+        }
+
+        return vsRes;
+    }
+
+    function descSort(ValidatorInfo[] memory validators)
+        internal
+        pure
+        returns (ValidatorInfo[] memory)
+    {
+        for (uint256 i = 0; i < validators.length - 1; i++) {
+            for (uint256 j = 0; j < validators.length - 1 - i; j++) {
+                if (validators[j].power < validators[j + 1].power) {
+                    ValidatorInfo memory temp = validators[j];
+                    validators[j] = validators[j + 1];
+                    validators[j + 1] = temp;
+                }
+            }
+        }
+        return validators;
     }
 
     function blockTrigger(
         address proposer,
         address[] memory signed,
+        uint256 circulationAmount,
         address[] memory byztine,
         ByztineBehavior[] memory behavior
     ) external override {
+        // Return unDelegate assets
         Staking staking = Staking(stakingAddress);
         staking.trigger();
+
+        // Reward
+        Reward reward = Reward(rewardAddress);
+        reward.reward(proposer, signed, circulationAmount);
+
+        // Punish
+        reward.punish(signed, byztine, behavior, validatorSetMaximum);
     }
 
-    function getClaimOps() external override returns (ClaimOps[] memory) {}
+    // Get data currently claiming
+    function getClaimOps() external override returns (ClaimOps[] memory) {
+        ClaimOps[] memory claimOps;
+
+        Reward reward = Reward(rewardAddress);
+        claimOps = reward.GetClaimOps();
+        reward.clearClaimOps();
+
+        return claimOps;
+    }
 }
