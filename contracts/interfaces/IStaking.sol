@@ -12,4 +12,12 @@ interface IStaking {
     function delegate(address validator) external payable;
 
     function undelegate(address validator, uint256 amount) external;
+
+    function updateValidator(
+        address validator,
+        string calldata memo,
+        uint256 rate
+    ) external;
+
+    function trigger() external;
 }

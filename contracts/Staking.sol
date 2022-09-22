@@ -1,44 +1,89 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import "./Power.sol";
+// import "./Power.sol";
 import "./utils/utils.sol";
 import "./interfaces/IStaking.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+
 
 contract Staking is Initializable, AccessControlEnumerable, IStaking {
     using Address for address;
     using EnumerableSet for EnumerableSet.AddressSet;
     using AmountUtils for uint256;
+    using SafeMath for uint256;
 
     /// --- contract config for Staking ---
 
     bytes32 public constant SYSTEM_ROLE = keccak256("SYSTEM");
-    bytes32 public constant REWARD_ROLE = keccak256("REWARD");
+    uint256 public constant FRA_UNITS = 10 ** 6;
 
     address public powerAddress;
+
+    function adminSetPowerAddress(address powerAddress_)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        powerAddress = powerAddress_;
+    }
 
     /// --- End contract config for staking ---
 
     /// --- Configure
 
     // Mininum staking value; Default: 10000 FRA
-    uint256 public stakeMininum;
+    uint256 public stakeMininum = 10000 * FRA_UNITS;
+
+    function adminSetStakeMinimum(uint256 stakeMininum_)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        stakeMininum = stakeMininum_;
+    }
 
     // Mininum delegate value; Default 1 unit
-    uint256 public delegateMininum;
+    uint256 public delegateMininum = 1;
+
+    function adminSetDelegateMinimum(uint256 delegateMininum_)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        delegateMininum = delegateMininum_;
+    }
 
     // rate of power. decimal is 6
-    uint256 public powerRateMaximum;
+    uint256 public powerRateMaximum = 200000;
+
+    function adminSetPowerRateMaximum(uint256 powerRateMaximum_)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        powerRateMaximum = powerRateMaximum_;
+    }
 
     // blocktime; Default 16.
-    uint256 public blocktime;
+    uint256 public blocktime = 16;
+
+    function adminSetBlocktime(uint256 blocktime_)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        blocktime = blocktime_;
+    }
 
     // unbound block count; Default 21 day. (21 * 24 * 60 * 60 / 16)
-    uint256 public unboundBlock;
+    uint256 public unboundBlock = 21 * 24 * 60 * 60 / 16;
+
+    function adminUnboundBlock(uint256 unboundBlock_)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        unboundBlock = unboundBlock_;
+    }
 
     /// --- End Configure
 
@@ -69,33 +114,105 @@ contract Staking is Initializable, AccessControlEnumerable, IStaking {
     // Addresses of all validators
     EnumerableSet.AddressSet private allValidators;
 
+    function allValidatorsLength() public view returns(uint256) {
+        return allValidators.length();
+    }
+
+    function allValidatorsAt(uint256 idx) public view returns(address) {
+        return allValidators.at(idx);
+    }
+
+    function allValidatorsContains(address value) public view returns(bool) {
+        return allValidators.contains(value);
+    }
+
     /// --- End State of validator
 
     /// --- State of delegator
 
-    /// delegator => validator => amount
-    mapping(address => mapping(address => uint256)) public delegatorsAmount;
+    struct Delegator {
+        mapping(address => uint256) boundAmount;
+        mapping(address => uint256) unboundAmount;
+        uint256 amount;
+    }
 
+    mapping(address => Delegator) public delegators;
 
+    mapping(address => EnumerableSet.AddressSet) private delegatorOfValidator;
+
+    mapping(address => EnumerableSet.AddressSet) private validatorOfDelegator;
+
+    EnumerableSet.AddressSet private allDelegators;
+
+    function _addDelegator(address delegator, address validator, uint256 amount) private {
+        Delegator storage d = delegators[delegator];
+
+        d.boundAmount[validator].add(amount);
+        d.amount.add(amount);
+
+        delegatorOfValidator[delegator].add(validator);
+        validatorOfDelegator[validator].add(delegator);
+
+        totalDelegationAmount.add(amount);
+    }
+
+    function _delDelegator(address delegator, address validator, uint256 amount) private {
+        Delegator storage d = delegators[delegator];
+
+        d.boundAmount[validator].sub(amount);
+        d.unboundAmount[validator].add(amount);
+    }
+
+    function delegatorOfValidatorLength(address delegator) public view returns(uint256) {
+        return delegatorOfValidator[delegator].length();
+    }
+
+    function delegatorOfValidatorAt(address delegator, uint256 idx) public view returns(address) {
+        return delegatorOfValidator[delegator].at(idx);
+    }
+
+    function delegatorOfValidatorContains(address delegator, address value) public view returns(bool) {
+        return delegatorOfValidator[delegator].contains(value);
+    }
+
+    function validatorOfDelegatorLength(address validator) public view returns(uint256) {
+        return validatorOfDelegator[validator].length();
+    }
+
+    function validatorOfDelegatorAt(address validator, uint256 idx) public view returns(address) {
+        return validatorOfDelegator[validator].at(idx);
+    }
+
+    function validatorOfDelegatorContains(address validator, address value) public view returns(bool) {
+        return validatorOfDelegator[validator].contains(value);
+    }
+
+    function allDelegatorsLength() public view returns(uint256) {
+        return allDelegators.length();
+    }
+
+    function allDelegatorsAt(uint256 idx) public view returns(address) {
+        return allDelegators.at(idx);
+    }
+
+    function allDelegatorsContains(address value) public view returns(bool) {
+        return allDelegators.contains(value);
+    }
 
     /// --- End state of delegator
 
-    /*
-     * All delegators of a validator
-     * (validator address => delegator address set).
-     */
-    mapping(address => EnumerableSet.AddressSet) private delegatorsOfValidators;
-
-    /*
-     * Delegate info
-     * (delegator => (validator => amount)).
-     */
-    // (delegator => total delegate amount).
-    mapping(address => uint256) public delegateInfo;
+    /// --- State of total staking
 
     // Total amount of delegate
-    uint256 public delegateTotal;
+    uint256 public totalDelegationAmount;
 
+    function maxDelegationAmountBasedOnTotalAmount() public view returns(uint256) {
+        return totalDelegationAmount * powerRateMaximum / FRA_UNITS;
+    }
+
+    /// --- End state of total staking
+
+    /// --- State of undelegation
     struct UndelegationRecord {
         address validator;
         address payable receiver;
@@ -105,11 +222,8 @@ contract Staking is Initializable, AccessControlEnumerable, IStaking {
 
     // UnDelegation records
     UndelegationRecord[] public undelegationRecords;
-    /*
-     * 在21天等待期的记录
-     * (undelegated address => mapping(validator address => amount))
-     */
-    mapping(address => mapping(address => uint256)) public unDelegatingRecords;
+
+    /// --- End state of undelegation
 
     event Stake(
         bytes public_key,
@@ -118,323 +232,167 @@ contract Staking is Initializable, AccessControlEnumerable, IStaking {
         string memo,
         uint256 rate
     );
-    event Delegation(address validator, address receiver, uint256 amount);
+    event Delegation(address validator, address delegator, uint256 amount);
     event Undelegation(address validator, address receiver, uint256 amount);
 
     function initialize(
         address system_,
-        address powerAddress_,
-        uint256 stakeMinimum_,
-        uint256 delegateMinimum_,
-        uint256 powerRateMaximum_,
-        uint256 blockInterval_
+        address powerAddress_
     ) public initializer {
         powerAddress = powerAddress_;
-        stakeMinimum = stakeMinimum_;
-        delegateMinimum = delegateMinimum_;
-        powerRateMaximum = powerRateMaximum_;
-        blockInterval = blockInterval_;
-        heightDifference = (86400 / blockInterval) * 21;
 
         _setupRole(SYSTEM_ROLE, system_);
     }
 
-    function adminSetPowerAddress(address powerAddress_)
-        public
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        powerAddress = powerAddress_;
+    // Stake
+    function stake(
+        address validator,
+        bytes calldata public_key,
+        string calldata memo,
+        uint256 rate
+    ) external payable override {
+        // Check whether the validator was staked
+        require(validators[validator].staker == address(0), "already staked");
+    
+        uint256 amount = msg.value.dropAmount(12);
+    
+        require(amount * (10**12) == msg.value, "lower 12 must be 0.");
+    
+        require(amount >= stakeMininum, "amount too small");
+
+        uint256 maxDelegateAmount = maxDelegationAmountBasedOnTotalAmount();
+
+        require(amount <= maxDelegateAmount, "amount too large");
+
+        Validator storage v = validators[validator];
+        v.public_key = public_key;
+        v.memo = memo;
+        v.rate = rate;
+        v.staker = msg.sender;
+
+        allValidators.add(validator);
+    
+        _addDelegator(msg.sender, validator, amount);
+
+        emit Stake(public_key, msg.sender, msg.value, memo, rate);
+    }
+    
+    // Delegate assets
+    function delegate(address validator) external payable override {
+        Validator storage v = validators[validator];
+        require(v.staker != address(0), "invalid validator");
+    
+        uint256 amount = msg.value.dropAmount(12);
+
+        require(amount * (10**12) == msg.value, "lower 12 must be 0.");
+
+        require(amount >= delegateMininum, "amount is too small");
+
+        uint256 maxDelegateAmount = maxDelegationAmountBasedOnTotalAmount();
+
+        require(amount <= maxDelegateAmount, "amount too large");
+
+        _addDelegator(msg.sender, validator, msg.value);
+
+        emit Delegation(validator, msg.sender, amount);
     }
 
-    function adminSetStakeMinimum(uint256 stakeMinimum_)
-        public
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        stakeMinimum = stakeMinimum_;
+    // UnDelegate assets
+    function undelegate(address validator, uint256 amount) external override {
+        Validator storage v = validators[validator];
+        require(v.staker != address(0), "invalid validator");
+
+        require(amount > 0, "amount must be greater than 0");
+
+        Delegator storage d = delegators[msg.sender];
+        require(amount < d.boundAmount[validator], "amount greater than bound amount");
+
+        _delDelegator(msg.sender, validator, amount);
+
+        // Push record
+        undelegationRecords.push(
+            UndelegationRecord(
+                validator,
+                payable(msg.sender),
+                amount,
+                block.number
+            )
+        );
+
+        emit Undelegation(validator, msg.sender, amount);
     }
 
-    function adminSetDelegateMinimum(uint256 delegateMinimum_)
-        public
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        delegateMinimum = delegateMinimum_;
+    // Update validator
+    // 该操作只能有 staker来操作
+    function updateValidator(
+        address validator,
+        string calldata memo,
+        uint256 rate
+    ) public {
+        // Check whether the validator is a stacker
+        Validator storage v = validators[validator];
+        require(
+            v.staker == msg.sender,
+            "only staker can do this operation"
+        );
+    
+        validators[validator].memo = memo;
+        validators[validator].rate = rate;
     }
 
-    function adminSetPowerRateMaximum(uint256 powerRateMaximum_)
-        public
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        powerRateMaximum = powerRateMaximum_;
+    
+    // Return unDelegate assets
+    function trigger() public onlyRole(SYSTEM_ROLE) {
+        // uint256 blockNo = block.number;
+        // Power powerContract = Power(powerAddress);
+        // for (uint256 i; i < undelegationRecords.length; i++) {
+        //     if ((blockNo - undelegationRecords[i].height) >= heightDifference) {
+        //         Address.sendValue(
+        //             undelegationRecords[i].receiver,
+        //             undelegationRecords[i].amount
+        //         );
+    
+        //         // Decrease amount and power
+        //         // 减去质押amount，减去power，在undelegate时候已经判断过金额，这里不必判断会减为负数,以及后12位
+    
+        //         // Update delegate amount and decrease power of validator
+        //         _descDelegateAmountAndPower(
+        //             undelegationRecords[i].validator,
+        //             undelegationRecords[i].receiver,
+        //             undelegationRecords[i].amount
+        //         );
+    
+        //         // Update the amount of 21 day waiting period
+        //         undelegationRecords[undelegationRecords[i].receiver][
+        //             undelegationRecords[i].validator
+        //         ] -= undelegationRecords[i].amount;
+    
+        //         // Remove the delegator of validator, if the delegate amount is 0
+        //         // 当某一质押者在某节点质押金额变为0，就从该节点下质押者地址集合移除质押者账户地址
+        //         if (
+        //             delegators[undelegationRecords[i].receiver][
+        //                 undelegationRecords[i].validator
+        //             ] == 0
+        //         ) {
+        //             delegatorsOfValidators[undelegationRecords[i].validator]
+        //                 .remove(undelegationRecords[i].receiver);
+        //         }
+    
+        //         // Removed from the validator set If the power of validator was reduced to 0
+        //         if (
+        //             powerContract.getPower(undelegationRecords[i].validator) ==
+        //             0
+        //         ) {
+        //             allValidators.remove(undelegationRecords[i].validator);
+        //         }
+    
+        //         // Event
+        //         emit Undelegation(
+        //             undelegationRecords[i].validator,
+        //             undelegationRecords[i].receiver,
+        //             undelegationRecords[i].amount
+        //         );
+        //     }
+        // }
     }
-
-//     function adminSetBlockInterval(uint256 blockInterval_)
-    //     public
-    //     onlyRole(DEFAULT_ADMIN_ROLE)
-    // {
-    //     blockInterval = blockInterval_;
-    //     heightDifference = (86400 / blockInterval) * 21;
-    // }
-    //
-    // function _addDelegateAmountAndPower(
-    //     address validator,
-    //     address delegator,
-    //     uint256 amount
-    // ) internal {
-    //     delegators[delegator][validator] += amount;
-    //     delegateInfo[delegator] += amount;
-    //     delegateTotal += amount;
-    //
-    //     Power powerContract = Power(powerAddress);
-    //     powerContract.addPower(validator, amount);
-    // }
-    //
-    // function _descDelegateAmountAndPower(
-    //     address validator,
-    //     address delegator,
-    //     uint256 amount
-    // ) internal {
-    //     delegators[delegator][validator] -= amount;
-    //     delegateInfo[delegator] -= amount;
-    //     delegateTotal -= amount;
-    //
-    //     Power powerContract = Power(powerAddress);
-    //     powerContract.descPower(validator, amount);
-    // }
-    //
-    // // Stake
-    // function stake(
-    //     address validator,
-    //     bytes calldata public_key,
-    //     string calldata memo,
-    //     uint256 rate
-    // ) external payable override {
-    //     // Check whether the validator was staked
-    //     require(validators[validator].staker == address(0), "already staked");
-    //
-    //     uint256 amount = msg.value.dropAmount(12);
-    //
-    //     require(amount * (10**12) == msg.value, "lower 12 must be 0.");
-    //
-    //     require(amount >= stakeMinimum, "amount too small");
-    //
-    //     Validator storage v = validators[validator];
-    //     v.public_key = public_key;
-    //     v.memo = memo;
-    //     v.rate = rate;
-    //     v.staker = msg.sender;
-    //
-    //     _addDelegateAmountAndPower(validator, msg.sender, amount);
-    //
-    //     allValidators.add(validator);
-    //
-    //     emit Stake(public_key, msg.sender, msg.value, memo, rate);
-    // }
-    //
-    // // Delegate assets
-    // function delegate(address validator) external payable override {
-    //     // Check whether the validator is a stacker
-    //     Validator storage v = validators[validator];
-    //     require(v.staker != address(0), "invalid validator");
-    //
-    //     uint256 amount = msg.value.dropAmount(12);
-    //
-    //     Power powerContract = Power(powerAddress);
-    //
-    //     require(amount >= delegateMinimum, "amount is too small");
-    //
-    //     require(amount * (10**12) == msg.value, "lower 12 must be 0.");
-    //
-    //     uint256 maxAmount = ((powerContract.powerTotal() + amount) /
-    //         powerRateMaximum) * (10**6);
-    //
-    //     require(amount < maxAmount, "amount is too large");
-    //
-    //     _addDelegateAmountAndPower(validator, msg.sender, amount);
-    //
-    //     delegatorsOfValidators[validator].add(msg.sender);
-    //
-    //     emit Delegation(validator, address(this), amount);
-    // }
-    //
-    // // UnDelegate assets
-    // function undelegate(address validator, uint256 amount) external override {
-    //     Validator storage v = validators[validator];
-    //     require(v.staker != address(0), "invalid validator");
-    //
-    //     require(amount > 0, "amount must be greater than 0");
-    //
-    //     uint256 delegateAmount = delegators[msg.sender][validator];
-    //
-    //     require(delegateAmount > amount, "amount too large");
-    //
-    //     _descDelegateAmountAndPower(validator, msg.sender, amount);
-    //
-    //     // Push record
-    //     undelegationRecords.push(
-    //         UndelegationRecord(
-    //             validator,
-    //             payable(msg.sender),
-    //             amount,
-    //             block.number
-    //         )
-    //     );
-    // }
-    //
-    // // Return unDelegate assets
-    // function trigger() public onlyRole(SYSTEM_ROLE) {
-    //     uint256 blockNo = block.number;
-    //     Power powerContract = Power(powerAddress);
-    //     for (uint256 i; i < undelegationRecords.length; i++) {
-    //         if ((blockNo - undelegationRecords[i].height) >= heightDifference) {
-    //             Address.sendValue(
-    //                 undelegationRecords[i].receiver,
-    //                 undelegationRecords[i].amount
-    //             );
-    //
-    //             // Decrease amount and power
-    //             // 减去质押amount，减去power，在undelegate时候已经判断过金额，这里不必判断会减为负数,以及后12位
-    //
-    //             // Update delegate amount and decrease power of validator
-    //             _descDelegateAmountAndPower(
-    //                 undelegationRecords[i].validator,
-    //                 undelegationRecords[i].receiver,
-    //                 undelegationRecords[i].amount
-    //             );
-    //
-    //             // Update the amount of 21 day waiting period
-    //             undelegationRecords[undelegationRecords[i].receiver][
-    //                 undelegationRecords[i].validator
-    //             ] -= undelegationRecords[i].amount;
-    //
-    //             // Remove the delegator of validator, if the delegate amount is 0
-    //             // 当某一质押者在某节点质押金额变为0，就从该节点下质押者地址集合移除质押者账户地址
-    //             if (
-    //                 delegators[undelegationRecords[i].receiver][
-    //                     undelegationRecords[i].validator
-    //                 ] == 0
-    //             ) {
-    //                 delegatorsOfValidators[undelegationRecords[i].validator]
-    //                     .remove(undelegationRecords[i].receiver);
-    //             }
-    //
-    //             // Removed from the validator set If the power of validator was reduced to 0
-    //             if (
-    //                 powerContract.getPower(undelegationRecords[i].validator) ==
-    //                 0
-    //             ) {
-    //                 allValidators.remove(undelegationRecords[i].validator);
-    //             }
-    //
-    //             // Event
-    //             emit Undelegation(
-    //                 undelegationRecords[i].validator,
-    //                 undelegationRecords[i].receiver,
-    //                 undelegationRecords[i].amount
-    //             );
-    //         }
-    //     }
-    // }
-    //
-    // // Update validator
-    // // 该操作只能有 staker来操作
-    // function updateValidator(
-    //     address validator,
-    //     string calldata memo,
-    //     uint256 rate
-    // ) public {
-    //     // Check whether the validator is a stacker
-    //     Validator storage v = validators[validator];
-    //     require(
-    //         (v.staker != address(0)) && (v.staker == msg.sender),
-    //         "invalid staker"
-    //     );
-    //
-    //     validators[validator].memo = memo;
-    //     validators[validator].rate = rate;
-    // }
-    //
-    // // Get all validator's addresses
-    // function getAllValidators() public view returns (address[] memory) {
-    //     return allValidators.values();
-    // }
-    //
-    // // Get all delegators of a validator
-    // function getDelegatorsByValidator(address validator)
-    //     public
-    //     view
-    //     returns (address[] memory)
-    // {
-    //     return delegatorsOfValidators[validator].values();
-    // }
-    //
-    // // Get staker address of a validator
-    // function getStakerByValidator(address validator)
-    //     public
-    //     view
-    //     returns (address)
-    // {
-    //     return validators[validator].staker;
-    // }
-    //
-    // // Check whether an validator-account is a Legal validator
-    // function isValidator(address validator) public view returns (bool) {
-    //     return allValidators.contains(validator);
-    // }
-    //
-    // // Get delegate amount
-    // function getDelegateAmount(address validator, address delegator)
-    //     public
-    //     view
-    //     returns (uint256)
-    // {
-    //     return delegators[validator][delegator];
-    // }
-    //
-    // // Get staker delegate amount
-    // function getStakerDelegateAmount(address validator)
-    //     public
-    //     view
-    //     returns (uint256)
-    // {
-    //     return delegators[validator][validators[validator].staker];
-    // }
-    //
-    // // Get validator rate
-    // function getValidatorRate(address validator) public view returns (uint256) {
-    //     return validators[validator].rate;
-    // }
-    //
-    // // Get total delegate amount of a delegator
-    // function getDelegateTotalAmount(address delegator)
-    //     public
-    //     view
-    //     onlyRole(REWARD_ROLE)
-    //     returns (uint256)
-    // {
-    //     return delegateInfo[delegator];
-    // }
-    //
-    // // Check the last 12 digits of the amount before use
-    // function descDelegateAmountAndPower(
-    //     address validator,
-    //     address delegator,
-    //     uint256 amount
-    // ) public onlyRole(SYSTEM_ROLE) {
-    //     require(
-    //         delegators[delegator][validator] >= amount,
-    //         "insufficient amount"
-    //     );
-    //
-    //     // Update delegator's delegate-amount of validator
-    //     delegators[delegator][validator] -= amount;
-    //     // Decrease total delegate-amount of delegator
-    //     delegateInfo[delegator] -= amount;
-    //     // Decrease total delegate-amount
-    //     delegateTotal -= amount;
-    //
-    //     // Decrease power
-    //     uint256 power = amount;
-    //     Power powerContract = Power(powerAddress);
-    //     powerContract.descPower(validator, power);
-    // }
 }

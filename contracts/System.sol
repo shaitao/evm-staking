@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-import "./Power.sol";
-import "./Staking.sol";
-import "./Reward.sol";
-import "./interfaces/ISystem.sol";
+import "./interfaces/IBase.sol";
+import "./interfaces/IStaking.sol";
+
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract System is Ownable, ISystem {
+contract System is Ownable, IBase {
     address private __self = address(this);
 
     // address of proxy contract
@@ -20,9 +19,6 @@ contract System is Ownable, ISystem {
     address public rewardAddress;
 
     address public powerAddress;
-
-    // Validator-info set Maximum length
-    uint256 public validatorSetMaximum;
 
     /**
      * @dev constructor function, for init proxy_contract.
@@ -52,76 +48,69 @@ contract System is Ownable, ISystem {
         powerAddress = powerAddress_;
     }
 
-    function adminSetValidatorSetMaximum(uint256 validatorSetMaximum_)
-        public
-        onlyOwner
-    {
-        validatorSetMaximum = validatorSetMaximum_;
-    }
+    // // Validator info
+    // function getValidatorInfoList()
+    //     external
+    //     view
+    //     override
+    //     returns (ValidatorInfo[] memory)
+    // {
+    //     Staking sc = Staking(stakingAddress);
 
-    // Validator info
-    function getValidatorInfoList()
-        external
-        view
-        override
-        returns (ValidatorInfo[] memory)
-    {
-        Staking sc = Staking(stakingAddress);
+    //     address[] memory addrs = sc.getAllValidators();
 
-        address[] memory addrs = sc.getAllValidators();
+    //     Power pc = Power(powerAddress);
 
-        Power pc = Power(powerAddress);
+    //     ValidatorInfo[] memory vs = new ValidatorInfo[](addrs.length);
+    //     ValidatorInfo[] memory vsRes;
+    //     if (addrs.length > validatorSetMaximum) {
+    //         vsRes = new ValidatorInfo[](validatorSetMaximum);
+    //     } else {
+    //         vsRes = new ValidatorInfo[](addrs.length);
+    //     }
 
-        ValidatorInfo[] memory vs = new ValidatorInfo[](addrs.length);
-        ValidatorInfo[] memory vsRes;
-        if (addrs.length > validatorSetMaximum) {
-            vsRes = new ValidatorInfo[](validatorSetMaximum);
-        } else {
-            vsRes = new ValidatorInfo[](addrs.length);
-        }
+    //     for (uint256 i = 0; i != addrs.length; i++) {
+    //         address validator = addrs[i];
+    //         (bytes memory public_key, , , ) = sc.validators(validator);
+    //         uint256 power = pc.getPower(validator);
 
-        for (uint256 i = 0; i != addrs.length; i++) {
-            address validator = addrs[i];
-            (bytes memory public_key, , , ) = sc.validators(validator);
-            uint256 power = pc.getPower(validator);
+    //         ValidatorInfo memory v = ValidatorInfo(
+    //             public_key,
+    //             validator,
+    //             power
+    //         );
 
-            ValidatorInfo memory v = ValidatorInfo(
-                public_key,
-                validator,
-                power
-            );
+    //         vs[i] = v;
+    //     }
 
-            vs[i] = v;
-        }
+    //     ValidatorInfo[] memory vsDesc = descSort(vs);
 
-        ValidatorInfo[] memory vsDesc = descSort(vs);
+    //     for (uint256 i = 0; i != vsDesc.length; i++) {
+    //         if (i >= validatorSetMaximum) {
+    //             break;
+    //         }
+    //         vsRes[i] = vsDesc[i];
+    //     }
 
-        for (uint256 i = 0; i != vsDesc.length; i++) {
-            if (i >= validatorSetMaximum) {
-                break;
-            }
-            vsRes[i] = vsDesc[i];
-        }
+    //     return vsRes;
+    // }
 
-        return vsRes;
-    }
-
-    function descSort(ValidatorInfo[] memory validators)
-        internal
-        pure
-        returns (ValidatorInfo[] memory)
-    {
-        for (uint256 i = 0; i < validators.length - 1; i++) {
-            for (uint256 j = 0; j < validators.length - 1 - i; j++) {
-                if (validators[j].power < validators[j + 1].power) {
-                    ValidatorInfo memory temp = validators[j];
-                    validators[j] = validators[j + 1];
-                    validators[j + 1] = temp;
-                }
-            }
-        }
-        return validators;
-    }
+    // function descSort(ValidatorInfo[] memory validators)
+    //     internal
+    //     pure
+    //     returns (ValidatorInfo[] memory)
+    // {
+    //     for (uint256 i = 0; i < validators.length - 1; i++) {
+    //         for (uint256 j = 0; j < validators.length - 1 - i; j++) {
+    //             if (validators[j].power < validators[j + 1].power) {
+    //                 ValidatorInfo memory temp = validators[j];
+    //                 validators[j] = validators[j + 1];
+    //                 validators[j + 1] = temp;
+    //             }
+    //         }
+    //     }
+    //     return validators;
+    // }
 
     function blockTrigger(
         address proposer,
@@ -129,27 +118,27 @@ contract System is Ownable, ISystem {
         uint256 circulationAmount,
         address[] memory byztine,
         ByztineBehavior[] memory behavior
-    ) external override {
+    ) external {
         // Return unDelegate assets
-        Staking staking = Staking(stakingAddress);
+        IStaking staking = IStaking(stakingAddress);
         staking.trigger();
 
-        // Reward
-        Reward reward = Reward(rewardAddress);
-        reward.reward(proposer, signed, circulationAmount);
+        // // Reward
+        // Reward reward = Reward(rewardAddress);
+        // reward.reward(proposer, signed, circulationAmount);
 
-        // Punish
-        reward.punish(signed, byztine, behavior, validatorSetMaximum);
+        // // Punish
+        // reward.punish(signed, byztine, behavior, validatorSetMaximum);
     }
 
     // Get data currently claiming
-    function getClaimOps() external override returns (ClaimOps[] memory) {
-        ClaimOps[] memory claimOps;
+    function getClaimOps() external returns (ClaimOps[] memory) {
+        // ClaimOps[] memory claimOps;
 
-        Reward reward = Reward(rewardAddress);
-        claimOps = reward.GetClaimOps();
-        reward.clearClaimOps();
+        // Reward reward = Reward(rewardAddress);
+        // claimOps = reward.GetClaimOps();
+        // reward.clearClaimOps();
 
-        return claimOps;
+        // return claimOps;
     }
 }
