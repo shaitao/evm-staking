@@ -106,6 +106,7 @@ contract Staking is Initializable, AccessControlEnumerable, IStaking {
         uint256 rate;
         // address of staker
         address staker;
+        uint256 power;
     }
 
     // address of tendermint => validator
@@ -147,20 +148,47 @@ contract Staking is Initializable, AccessControlEnumerable, IStaking {
     function _addDelegator(address delegator, address validator, uint256 amount) private {
         Delegator storage d = delegators[delegator];
 
-        d.boundAmount[validator].add(amount);
-        d.amount.add(amount);
+        uint256 boundAmount = d.boundAmount[validator];
+        d.boundAmount[validator] = boundAmount.add(amount);
+
+        d.amount = d.amount.add(amount);
+
+        Validator storage v = validators[validator];
+        v.power = v.power.add(amount);
 
         delegatorOfValidator[delegator].add(validator);
         validatorOfDelegator[validator].add(delegator);
 
-        totalDelegationAmount.add(amount);
+        totalDelegationAmount = totalDelegationAmount.add(amount);
     }
 
     function _delDelegator(address delegator, address validator, uint256 amount) private {
         Delegator storage d = delegators[delegator];
 
-        d.boundAmount[validator].sub(amount);
-        d.unboundAmount[validator].add(amount);
+        uint256 boundAmount = d.boundAmount[validator];
+        d.boundAmount[validator] = boundAmount.sub(amount);
+
+        uint256 unboundAmount = d.unboundAmount[validator];
+        d.unboundAmount[validator] = unboundAmount.add(amount);
+    }
+
+    function _realDelDelegator(address delegator, address validator, uint256 amount) private {
+        Delegator storage d = delegators[delegator];
+
+        uint256 unboundAmount = d.unboundAmount[validator];
+        d.unboundAmount[validator] = unboundAmount.sub(amount);
+
+        if(d.unboundAmount[validator] + d.boundAmount[validator] == 0) {
+            delegatorOfValidator[delegator].remove(validator);
+            validatorOfDelegator[validator].remove(delegator);
+        }
+
+        d.amount = d.amount.sub(amount);
+
+        Validator storage v = validators[validator];
+        v.power = v.power.sub(amount);
+
+        totalDelegationAmount = totalDelegationAmount.sub(amount);
     }
 
     function delegatorOfValidatorLength(address delegator) public view returns(uint256) {
@@ -215,7 +243,7 @@ contract Staking is Initializable, AccessControlEnumerable, IStaking {
     /// --- State of undelegation
     struct UndelegationRecord {
         address validator;
-        address payable receiver;
+        address payable delegator;
         uint256 amount;
         uint256 height;
     }
@@ -343,56 +371,21 @@ contract Staking is Initializable, AccessControlEnumerable, IStaking {
     
     // Return unDelegate assets
     function trigger() public onlyRole(SYSTEM_ROLE) {
-        // uint256 blockNo = block.number;
-        // Power powerContract = Power(powerAddress);
-        // for (uint256 i; i < undelegationRecords.length; i++) {
-        //     if ((blockNo - undelegationRecords[i].height) >= heightDifference) {
-        //         Address.sendValue(
-        //             undelegationRecords[i].receiver,
-        //             undelegationRecords[i].amount
-        //         );
-    
-        //         // Decrease amount and power
-        //         // 减去质押amount，减去power，在undelegate时候已经判断过金额，这里不必判断会减为负数,以及后12位
-    
-        //         // Update delegate amount and decrease power of validator
-        //         _descDelegateAmountAndPower(
-        //             undelegationRecords[i].validator,
-        //             undelegationRecords[i].receiver,
-        //             undelegationRecords[i].amount
-        //         );
-    
-        //         // Update the amount of 21 day waiting period
-        //         undelegationRecords[undelegationRecords[i].receiver][
-        //             undelegationRecords[i].validator
-        //         ] -= undelegationRecords[i].amount;
-    
-        //         // Remove the delegator of validator, if the delegate amount is 0
-        //         // 当某一质押者在某节点质押金额变为0，就从该节点下质押者地址集合移除质押者账户地址
-        //         if (
-        //             delegators[undelegationRecords[i].receiver][
-        //                 undelegationRecords[i].validator
-        //             ] == 0
-        //         ) {
-        //             delegatorsOfValidators[undelegationRecords[i].validator]
-        //                 .remove(undelegationRecords[i].receiver);
-        //         }
-    
-        //         // Removed from the validator set If the power of validator was reduced to 0
-        //         if (
-        //             powerContract.getPower(undelegationRecords[i].validator) ==
-        //             0
-        //         ) {
-        //             allValidators.remove(undelegationRecords[i].validator);
-        //         }
-    
-        //         // Event
-        //         emit Undelegation(
-        //             undelegationRecords[i].validator,
-        //             undelegationRecords[i].receiver,
-        //             undelegationRecords[i].amount
-        //         );
-        //     }
-        // }
+        uint256 blockNo = block.number;
+
+        for (uint256 i; i < undelegationRecords.length; i++) {
+            UndelegationRecord storage ur = undelegationRecords[i];
+
+            // If this record reach target hright, send value and descrease amount.
+            if ((blockNo - ur.height) >= unboundBlock) {
+                _realDelDelegator(ur.delegator, ur.validator, ur.amount);
+
+                // Send value
+                Address.sendValue(
+                    ur.delegator,
+                    ur.amount
+                );
+            }
+        }
     }
 }
