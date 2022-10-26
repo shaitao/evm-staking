@@ -9,8 +9,11 @@ import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeab
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-
-contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking {
+contract Staking is
+    Initializable,
+    AccessControlEnumerableUpgradeable,
+    IStaking
+{
     using AddressUpgradeable for address;
     using AddressUpgradeable for address payable;
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
@@ -19,7 +22,7 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
     /// --- contract config for Staking ---
 
     bytes32 public constant SYSTEM_ROLE = keccak256("SYSTEM");
-    uint256 public constant FRA_UNITS = 10 ** 6;
+    uint256 public constant FRA_UNITS = 10**6;
 
     /// --- End contract config for staking ---
 
@@ -105,15 +108,15 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
     // Addresses of all validators
     EnumerableSetUpgradeable.AddressSet private allValidators;
 
-    function allValidatorsLength() public view returns(uint256) {
+    function allValidatorsLength() public view returns (uint256) {
         return allValidators.length();
     }
 
-    function allValidatorsAt(uint256 idx) public view returns(address) {
+    function allValidatorsAt(uint256 idx) public view returns (address) {
         return allValidators.at(idx);
     }
 
-    function allValidatorsContains(address value) public view returns(bool) {
+    function allValidatorsContains(address value) public view returns (bool) {
         return allValidators.contains(value);
     }
 
@@ -129,13 +132,19 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
 
     mapping(address => Delegator) public delegators;
 
-    mapping(address => EnumerableSetUpgradeable.AddressSet) private delegatorOfValidator;
+    mapping(address => EnumerableSetUpgradeable.AddressSet)
+        private delegatorOfValidator;
 
-    mapping(address => EnumerableSetUpgradeable.AddressSet) private validatorOfDelegator;
+    mapping(address => EnumerableSetUpgradeable.AddressSet)
+        private validatorOfDelegator;
 
     EnumerableSetUpgradeable.AddressSet private allDelegators;
 
-    function _addDelegator(address delegator, address validator, uint256 amount) private {
+    function _addDelegator(
+        address delegator,
+        address validator,
+        uint256 amount
+    ) private {
         Delegator storage d = delegators[delegator];
 
         uint256 boundAmount = d.boundAmount[validator];
@@ -152,7 +161,11 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
         totalDelegationAmount = totalDelegationAmount.add(amount);
     }
 
-    function _delDelegator(address delegator, address validator, uint256 amount) private {
+    function _delDelegator(
+        address delegator,
+        address validator,
+        uint256 amount
+    ) private {
         Delegator storage d = delegators[delegator];
 
         uint256 boundAmount = d.boundAmount[validator];
@@ -162,13 +175,17 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
         d.unboundAmount[validator] = unboundAmount.add(amount);
     }
 
-    function _realDelDelegator(address delegator, address validator, uint256 amount) private {
+    function _realDelDelegator(
+        address delegator,
+        address validator,
+        uint256 amount
+    ) private {
         Delegator storage d = delegators[delegator];
 
         uint256 unboundAmount = d.unboundAmount[validator];
         d.unboundAmount[validator] = unboundAmount.sub(amount);
 
-        if(d.unboundAmount[validator] + d.boundAmount[validator] == 0) {
+        if (d.unboundAmount[validator] + d.boundAmount[validator] == 0) {
             delegatorOfValidator[delegator].remove(validator);
             validatorOfDelegator[validator].remove(delegator);
         }
@@ -181,39 +198,63 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
         totalDelegationAmount = totalDelegationAmount.sub(amount);
     }
 
-    function delegatorOfValidatorLength(address delegator) public view returns(uint256) {
+    function delegatorOfValidatorLength(address delegator)
+        public
+        view
+        returns (uint256)
+    {
         return delegatorOfValidator[delegator].length();
     }
 
-    function delegatorOfValidatorAt(address delegator, uint256 idx) public view returns(address) {
+    function delegatorOfValidatorAt(address delegator, uint256 idx)
+        public
+        view
+        returns (address)
+    {
         return delegatorOfValidator[delegator].at(idx);
     }
 
-    function delegatorOfValidatorContains(address delegator, address value) public view returns(bool) {
+    function delegatorOfValidatorContains(address delegator, address value)
+        public
+        view
+        returns (bool)
+    {
         return delegatorOfValidator[delegator].contains(value);
     }
 
-    function validatorOfDelegatorLength(address validator) public view returns(uint256) {
+    function validatorOfDelegatorLength(address validator)
+        public
+        view
+        returns (uint256)
+    {
         return validatorOfDelegator[validator].length();
     }
 
-    function validatorOfDelegatorAt(address validator, uint256 idx) public view returns(address) {
+    function validatorOfDelegatorAt(address validator, uint256 idx)
+        public
+        view
+        returns (address)
+    {
         return validatorOfDelegator[validator].at(idx);
     }
 
-    function validatorOfDelegatorContains(address validator, address value) public view returns(bool) {
+    function validatorOfDelegatorContains(address validator, address value)
+        public
+        view
+        returns (bool)
+    {
         return validatorOfDelegator[validator].contains(value);
     }
 
-    function allDelegatorsLength() public view returns(uint256) {
+    function allDelegatorsLength() public view returns (uint256) {
         return allDelegators.length();
     }
 
-    function allDelegatorsAt(uint256 idx) public view returns(address) {
+    function allDelegatorsAt(uint256 idx) public view returns (address) {
         return allDelegators.at(idx);
     }
 
-    function allDelegatorsContains(address value) public view returns(bool) {
+    function allDelegatorsContains(address value) public view returns (bool) {
         return allDelegators.contains(value);
     }
 
@@ -224,8 +265,12 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
     // Total amount of delegate
     uint256 public totalDelegationAmount;
 
-    function maxDelegationAmountBasedOnTotalAmount() public view returns(uint256) {
-        return totalDelegationAmount * powerRateMaximum / FRA_UNITS;
+    function maxDelegationAmountBasedOnTotalAmount()
+        public
+        view
+        returns (uint256)
+    {
+        return (totalDelegationAmount * powerRateMaximum) / FRA_UNITS;
     }
 
     /// --- End state of total staking
@@ -253,15 +298,14 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
     event Delegation(address validator, address delegator, uint256 amount);
     event Undelegation(address validator, address receiver, uint256 amount);
 
-    function initialize(
-        address system_
-    ) public initializer {
+    function initialize(address system_) public initializer {
         stakeMininum = 10000 * FRA_UNITS;
         delegateMininum = 1;
         powerRateMaximum = 200000;
         blocktime = 16;
-        unboundBlock = 21 * 24 * 60 * 60 / 16;
+        unboundBlock = (21 * 24 * 60 * 60) / 16;
 
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(SYSTEM_ROLE, system_);
     }
 
@@ -274,11 +318,11 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
     ) external payable override {
         // Check whether the validator was staked
         require(validators[validator].staker == address(0), "already staked");
-    
+
         uint256 amount = dropAmount(msg.value, 12);
-    
+
         require(amount * (10**12) == msg.value, "lower 12 must be 0.");
-    
+
         require(amount >= stakeMininum, "amount too small");
 
         uint256 maxDelegateAmount = maxDelegationAmountBasedOnTotalAmount();
@@ -292,17 +336,17 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
         v.staker = msg.sender;
 
         allValidators.add(validator);
-    
+
         _addDelegator(msg.sender, validator, amount);
 
         emit Stake(public_key, msg.sender, msg.value, memo, rate);
     }
-    
+
     // Delegate assets
     function delegate(address validator) external payable override {
         Validator storage v = validators[validator];
         require(v.staker != address(0), "invalid validator");
-    
+
         uint256 amount = dropAmount(msg.value, 12);
 
         require(amount * (10**12) == msg.value, "lower 12 must be 0.");
@@ -326,7 +370,10 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
         require(amount > 0, "amount must be greater than 0");
 
         Delegator storage d = delegators[msg.sender];
-        require(amount < d.boundAmount[validator], "amount greater than bound amount");
+        require(
+            amount < d.boundAmount[validator],
+            "amount greater than bound amount"
+        );
 
         _delDelegator(msg.sender, validator, amount);
 
@@ -352,16 +399,12 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
     ) public {
         // Check whether the validator is a stacker
         Validator storage v = validators[validator];
-        require(
-            v.staker == msg.sender,
-            "only staker can do this operation"
-        );
-    
+        require(v.staker == msg.sender, "only staker can do this operation");
+
         validators[validator].memo = memo;
         validators[validator].rate = rate;
     }
 
-    
     // Return unDelegate assets
     function trigger() public onlyRole(SYSTEM_ROLE) {
         uint256 blockNo = block.number;
@@ -380,7 +423,52 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
         }
     }
 
-    // -------- utils function 
+    function adminStake(
+        address validator,
+        bytes calldata public_key,
+        address staker,
+        string calldata memo,
+        uint256 rate
+    ) external payable onlyRole(SYSTEM_ROLE) {
+        // Check whether the validator was staked
+        require(validators[validator].staker == address(0), "already staked");
+
+        uint256 amount = dropAmount(msg.value, 12);
+
+        require(amount * (10**12) == msg.value, "lower 12 must be 0.");
+
+        Validator storage v = validators[validator];
+        v.public_key = public_key;
+        v.memo = memo;
+        v.rate = rate;
+        v.staker = staker;
+
+        allValidators.add(validator);
+
+        _addDelegator(staker, validator, amount);
+
+        emit Stake(public_key, staker, msg.value, memo, rate);
+    }
+
+    // Delegate assets
+    function adminDelegate(address validator, address delegator)
+        external
+        payable
+        onlyRole(SYSTEM_ROLE)
+    {
+        Validator storage v = validators[validator];
+        require(v.staker != address(0), "invalid validator");
+
+        uint256 amount = dropAmount(msg.value, 12);
+
+        require(amount * (10**12) == msg.value, "lower 12 must be 0.");
+
+        _addDelegator(delegator, validator, msg.value);
+
+        emit Delegation(validator, delegator, amount);
+    }
+
+    // -------- utils function
 
     function dropAmount(uint256 amount, uint8 decimal)
         public

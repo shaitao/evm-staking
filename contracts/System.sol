@@ -134,11 +134,9 @@ contract System is Ownable, IBase {
     // Get data currently claiming
     function getClaimOps() external returns (ClaimOps[] memory) {
         // ClaimOps[] memory claimOps;
-
         // Reward reward = Reward(rewardAddress);
         // claimOps = reward.GetClaimOps();
         // reward.clearClaimOps();
-
         // return claimOps;
     }
 }
