@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-// import "./Power.sol";
 import "./interfaces/IStaking.sol";
+import "./interfaces/IBase.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
@@ -12,6 +12,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 contract Staking is
     Initializable,
     AccessControlEnumerableUpgradeable,
+    IBase,
     IStaking
 {
     using AddressUpgradeable for address;
@@ -81,12 +82,6 @@ contract Staking is
     /// --- End Configure
 
     /// --- State of validator
-
-    enum PublicKeyType {
-        Unknown,
-        Secp256k1,
-        Ed25519
-    }
 
     struct Validator {
         // Public key of validator
