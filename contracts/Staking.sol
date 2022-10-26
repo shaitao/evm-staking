@@ -2,20 +2,18 @@
 pragma solidity ^0.8.9;
 
 // import "./Power.sol";
-import "./utils/utils.sol";
 import "./interfaces/IStaking.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 
 contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking {
     using AddressUpgradeable for address;
     using AddressUpgradeable for address payable;
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
-    using AmountUtils for uint256;
     using SafeMathUpgradeable for uint256;
 
     /// --- contract config for Staking ---
@@ -28,7 +26,7 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
     /// --- Configure
 
     // Mininum staking value; Default: 10000 FRA
-    uint256 public stakeMininum = 10000 * FRA_UNITS;
+    uint256 public stakeMininum;
 
     function adminSetStakeMinimum(uint256 stakeMininum_)
         public
@@ -38,7 +36,7 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
     }
 
     // Mininum delegate value; Default 1 unit
-    uint256 public delegateMininum = 1;
+    uint256 public delegateMininum;
 
     function adminSetDelegateMinimum(uint256 delegateMininum_)
         public
@@ -48,7 +46,7 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
     }
 
     // rate of power. decimal is 6
-    uint256 public powerRateMaximum = 200000;
+    uint256 public powerRateMaximum;
 
     function adminSetPowerRateMaximum(uint256 powerRateMaximum_)
         public
@@ -58,7 +56,7 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
     }
 
     // blocktime; Default 16.
-    uint256 public blocktime = 16;
+    uint256 public blocktime;
 
     function adminSetBlocktime(uint256 blocktime_)
         public
@@ -68,7 +66,7 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
     }
 
     // unbound block count; Default 21 day. (21 * 24 * 60 * 60 / 16)
-    uint256 public unboundBlock = 21 * 24 * 60 * 60 / 16;
+    uint256 public unboundBlock;
 
     function adminUnboundBlock(uint256 unboundBlock_)
         public
@@ -258,6 +256,12 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
     function initialize(
         address system_
     ) public initializer {
+        stakeMininum = 10000 * FRA_UNITS;
+        delegateMininum = 1;
+        powerRateMaximum = 200000;
+        blocktime = 16;
+        unboundBlock = 21 * 24 * 60 * 60 / 16;
+
         _setupRole(SYSTEM_ROLE, system_);
     }
 
@@ -271,7 +275,7 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
         // Check whether the validator was staked
         require(validators[validator].staker == address(0), "already staked");
     
-        uint256 amount = msg.value.dropAmount(12);
+        uint256 amount = dropAmount(msg.value, 12);
     
         require(amount * (10**12) == msg.value, "lower 12 must be 0.");
     
@@ -299,7 +303,7 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
         Validator storage v = validators[validator];
         require(v.staker != address(0), "invalid validator");
     
-        uint256 amount = msg.value.dropAmount(12);
+        uint256 amount = dropAmount(msg.value, 12);
 
         require(amount * (10**12) == msg.value, "lower 12 must be 0.");
 
@@ -374,5 +378,17 @@ contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking 
                 delegator.sendValue(ur.amount);
             }
         }
+    }
+
+    // -------- utils function 
+
+    function dropAmount(uint256 amount, uint8 decimal)
+        public
+        pure
+        returns (uint256)
+    {
+        uint256 pow = 10**decimal;
+        uint256 res = amount / pow;
+        return res;
     }
 }

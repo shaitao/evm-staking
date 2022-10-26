@@ -4,26 +4,32 @@
 // You can also run a script with `npx hardhat run <script>`. If you do that, Hardhat
 // will compile your contracts, add the Hardhat Runtime Environment's members to the
 // global scope, and execute the script.
-const hre = require("hardhat");
+const { ethers, upgrades } = require("hardhat");
+
+async function deloyAmountUtils() {
+    const AmountUtils = await ethers.getContractFactory("AmountUtils");
+    const au = await AmountUtils.deploy();
+
+    await au.deployed();
+
+    console.log("AmountUtils address is:", au.address);
+
+    return au.address;
+}
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
-  const unlockTime = currentTimestampInSeconds + ONE_YEAR_IN_SECS;
+    const Staking = await ethers.getContractFactory("Staking");
 
-  const lockedAmount = hre.ethers.utils.parseEther("1");
+    const mc = await upgrades.deployProxy(Staking, ["0x72488bAa718F52B76118C79168E55c209056A2E6"]);
 
-  const Lock = await hre.ethers.getContractFactory("Lock");
-  const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
+    await mc.deployed();
 
-  await lock.deployed();
-
-  console.log("Lock with 1 ETH deployed to:", lock.address);
+    console.log("Staking address:", mc.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
 // and properly handle errors.
 main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
+    console.error(error);
+    process.exitCode = 1;
 });
