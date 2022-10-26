@@ -4,18 +4,19 @@ pragma solidity ^0.8.9;
 // import "./Power.sol";
 import "./utils/utils.sol";
 import "./interfaces/IStaking.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 
 
-contract Staking is Initializable, AccessControlEnumerable, IStaking {
-    using Address for address;
-    using EnumerableSet for EnumerableSet.AddressSet;
+contract Staking is Initializable, AccessControlEnumerableUpgradeable, IStaking {
+    using AddressUpgradeable for address;
+    using AddressUpgradeable for address payable;
+    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
     using AmountUtils for uint256;
-    using SafeMath for uint256;
+    using SafeMathUpgradeable for uint256;
 
     /// --- contract config for Staking ---
 
@@ -104,7 +105,7 @@ contract Staking is Initializable, AccessControlEnumerable, IStaking {
     mapping(address => Validator) public validators;
 
     // Addresses of all validators
-    EnumerableSet.AddressSet private allValidators;
+    EnumerableSetUpgradeable.AddressSet private allValidators;
 
     function allValidatorsLength() public view returns(uint256) {
         return allValidators.length();
@@ -130,11 +131,11 @@ contract Staking is Initializable, AccessControlEnumerable, IStaking {
 
     mapping(address => Delegator) public delegators;
 
-    mapping(address => EnumerableSet.AddressSet) private delegatorOfValidator;
+    mapping(address => EnumerableSetUpgradeable.AddressSet) private delegatorOfValidator;
 
-    mapping(address => EnumerableSet.AddressSet) private validatorOfDelegator;
+    mapping(address => EnumerableSetUpgradeable.AddressSet) private validatorOfDelegator;
 
-    EnumerableSet.AddressSet private allDelegators;
+    EnumerableSetUpgradeable.AddressSet private allDelegators;
 
     function _addDelegator(address delegator, address validator, uint256 amount) private {
         Delegator storage d = delegators[delegator];
@@ -369,10 +370,8 @@ contract Staking is Initializable, AccessControlEnumerable, IStaking {
                 _realDelDelegator(ur.delegator, ur.validator, ur.amount);
 
                 // Send value
-                Address.sendValue(
-                    ur.delegator,
-                    ur.amount
-                );
+                address payable delegator = ur.delegator;
+                delegator.sendValue(ur.amount);
             }
         }
     }
