@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import "./interfaces/IBase.sol";
 import "./interfaces/IStaking.sol";
+import "./interfaces/IPower.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -48,71 +49,7 @@ contract System is Ownable, IBase {
         powerAddress = powerAddress_;
     }
 
-    // // Validator info
-    // function getValidatorInfoList()
-    //     external
-    //     view
-    //     override
-    //     returns (ValidatorInfo[] memory)
-    // {
-    //     Staking sc = Staking(stakingAddress);
-
-    //     address[] memory addrs = sc.getAllValidators();
-
-    //     Power pc = Power(powerAddress);
-
-    //     ValidatorInfo[] memory vs = new ValidatorInfo[](addrs.length);
-    //     ValidatorInfo[] memory vsRes;
-    //     if (addrs.length > validatorSetMaximum) {
-    //         vsRes = new ValidatorInfo[](validatorSetMaximum);
-    //     } else {
-    //         vsRes = new ValidatorInfo[](addrs.length);
-    //     }
-
-    //     for (uint256 i = 0; i != addrs.length; i++) {
-    //         address validator = addrs[i];
-    //         (bytes memory public_key, , , ) = sc.validators(validator);
-    //         uint256 power = pc.getPower(validator);
-
-    //         ValidatorInfo memory v = ValidatorInfo(
-    //             public_key,
-    //             validator,
-    //             power
-    //         );
-
-    //         vs[i] = v;
-    //     }
-
-    //     ValidatorInfo[] memory vsDesc = descSort(vs);
-
-    //     for (uint256 i = 0; i != vsDesc.length; i++) {
-    //         if (i >= validatorSetMaximum) {
-    //             break;
-    //         }
-    //         vsRes[i] = vsDesc[i];
-    //     }
-
-    //     return vsRes;
-    // }
-
-    // function descSort(ValidatorInfo[] memory validators)
-    //     internal
-    //     pure
-    //     returns (ValidatorInfo[] memory)
-    // {
-    //     for (uint256 i = 0; i < validators.length - 1; i++) {
-    //         for (uint256 j = 0; j < validators.length - 1 - i; j++) {
-    //             if (validators[j].power < validators[j + 1].power) {
-    //                 ValidatorInfo memory temp = validators[j];
-    //                 validators[j] = validators[j + 1];
-    //                 validators[j + 1] = temp;
-    //             }
-    //         }
-    //     }
-    //     return validators;
-    // }
-
-    function blockTrigger(
+    function trigger(
         address proposer,
         address[] memory signed,
         uint256 circulationAmount,
@@ -138,5 +75,11 @@ contract System is Ownable, IBase {
         // claimOps = reward.GetClaimOps();
         // reward.clearClaimOps();
         // return claimOps;
+    }
+
+    function getValidatorsList() external returns(ValidatorInfo[] memory) {
+        IPower power = IPower(powerAddress);
+
+        return power.getValidatorsList();
     }
 }
