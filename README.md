@@ -85,8 +85,8 @@ These `state variable` can access directly. Default value maybe change, don't ha
 - powerRateMaximum: Maxinum rate of power, Default is 0.2 (200000)
 - blocktime: Blocktime, Default is 16.
 - unboundBlock: Lock time for undelegate.
-
-#### 
+- totalDelegationAmount; totol amount.
+- maxDelegationAmountBasedOnTotalAmount(); Stake / Delegate value must less than this value.
 
 #### Validators
 
@@ -94,7 +94,6 @@ These `state variable` can access directly. Default value maybe change, don't ha
 - allValidatorsLength() -> usize; Get all validators count.
 - allValidatorsAt(uint256) -> address; Get validator's address based on idx, the range is `0 .. allValidatorsLength()`.
 - allValidatorsContains(address) -> bool; If an address is validator, return true;
-- totalDelegationAmount; totol amount.
 
 Validator struct contain these field:
 
