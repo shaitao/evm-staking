@@ -31,6 +31,22 @@ Make a fullnode to validator
 - memo: json format for display on blockexplorer.
 - rate: rate. 6 decimal. i.e. 0.6 = 600000
 
+Example of `config/priv_validator_key.json`:
+
+```json
+{
+  "address": "E6987F77282FE6978373D64462EE3F823D114129",
+  "pub_key": {
+    "type": "tendermint/PubKeyEd25519",
+    "value": "CifZFoeSuzNhJG0uMH0tSh1C9on37hicVsR3/41JkpA="
+  },
+  "priv_key": {
+    "type": "tendermint/PrivKeyEd25519",
+    "value": "S9lcIc4k+Ez5ZGu32Q6g3vfqtfYCbW3LcXtFeZEZwv0KJ9kWh5K7M2EkbS4wfS1KHUL2iffuGJxWxHf/jUmSkA=="
+  }
+}
+```
+
 Please use `msg.value` sending some FRA to stake. And `msg.sender` will be this validator's `staker`.
 
 
@@ -70,12 +86,15 @@ These `state variable` can access directly. Default value maybe change, don't ha
 - blocktime: Blocktime, Default is 16.
 - unboundBlock: Lock time for undelegate.
 
+#### 
+
 #### Validators
 
-- validators: mapping(address => Validator); Mapping address of validator to validator:
+- validators: mapping(address => Validator); Mapping address to validator:
 - allValidatorsLength() -> usize; Get all validators count.
 - allValidatorsAt(uint256) -> address; Get validator's address based on idx, the range is `0 .. allValidatorsLength()`.
 - allValidatorsContains(address) -> bool; If an address is validator, return true;
+- totalDelegationAmount; totol amount.
 
 Validator struct contain these field:
 
@@ -110,14 +129,20 @@ Iterate all delegator:
 
 - allDelegatorsLength(); Get all delegators count.
 - allDelegatorsAt(uint256 idx) -> address; Get validator's address based on idx, the range is 0 .. allDelegatorsLength().
-- allDelegatorsContains(address value); If an address is delegator, return true;
+- allDelegatorsContains(address value) -> bool; If an address is delegator, return true;
 
-Mapping of `validator` to `delegator`:
+Iterate `validator` to `delegator` . Get delegators under a validator:
+
+- validatorOfDelegatorLength(address validator); Get all delegators count under validator.
+- validatorOfDelegatorAt(address validator, uint256 idx) -> address; Get delegator address under validator.
+- validatorOfDelegatorContains(address validator, address delegator) -> bool; If a validator have this delegator, return true.
 
 
+Iterate `delegator` to `validator` . Get `delegator` stake to `validator`.
 
-
-
+- delegatorOfValidatorLength(address delegator); Get all validators count is staked / delegated.
+- delegatorOfValidatorAt(address delegator, uint256 idx) -> address; Get validator under delegator.
+- delegatorOfValidatorContains(address delegator, address value) -> bool; If a delegator stake / delegate to validator, return true.
 
 
 
