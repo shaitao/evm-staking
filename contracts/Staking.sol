@@ -22,15 +22,6 @@ contract Staking is Initializable, AccessControlEnumerable, IStaking {
     bytes32 public constant SYSTEM_ROLE = keccak256("SYSTEM");
     uint256 public constant FRA_UNITS = 10 ** 6;
 
-    address public powerAddress;
-
-    function adminSetPowerAddress(address powerAddress_)
-        public
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        powerAddress = powerAddress_;
-    }
-
     /// --- End contract config for staking ---
 
     /// --- Configure
@@ -264,11 +255,8 @@ contract Staking is Initializable, AccessControlEnumerable, IStaking {
     event Undelegation(address validator, address receiver, uint256 amount);
 
     function initialize(
-        address system_,
-        address powerAddress_
+        address system_
     ) public initializer {
-        powerAddress = powerAddress_;
-
         _setupRole(SYSTEM_ROLE, system_);
     }
 
