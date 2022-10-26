@@ -6,17 +6,6 @@
 // global scope, and execute the script.
 const { ethers, upgrades } = require("hardhat");
 
-async function deloyAmountUtils() {
-    const AmountUtils = await ethers.getContractFactory("AmountUtils");
-    const au = await AmountUtils.deploy();
-
-    await au.deployed();
-
-    console.log("AmountUtils address is:", au.address);
-
-    return au.address;
-}
-
 async function main() {
     const Staking = await ethers.getContractFactory("Staking");
 
