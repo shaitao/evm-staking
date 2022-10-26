@@ -15,6 +15,7 @@ All method use 6 decimal for FRA.
 For Native FRA is 18 decimal, you must follow this rule:
 
 Stake 3.123456 FRA, in Native FRA is: 312_3456_0000_0000_0000. this value is accept by Staking contract.
+
 Stake 3.1234567 FRA, in Native is : 312_3456_7000_0000_0000. this value will be reject by Staking contract.
 
 **The above rule used for `msg.value`. Argument of contract decimal is 6.**
@@ -72,7 +73,7 @@ These `state variable` can access directly. Default value maybe change, don't ha
 #### Validators
 
 - validators: mapping(address => Validator); Mapping address of validator to validator:
-- allValidatorsLength() -> usize; Get all validatrs cmount.
+- allValidatorsLength() -> usize; Get all validators count.
 - allValidatorsAt(uint256) -> address; Get validator's address based on idx, the range is `0 .. allValidatorsLength()`.
 - allValidatorsContains(address) -> bool; If an address is validator, return true;
 
@@ -98,6 +99,22 @@ struct Validator {
 #### Delegators
 
 - delegators: mapping(address => Delegator); Get Delegator info based on address
+
+Delegators:
+
+- boundAmount: mapping(address => uint256); Delegate / Stake amount on validator. address is validator address.
+- unboundAmount: mapping(address => uint256); Total locked amount in undelegation.
+- amount; Total amount for all validators.
+
+Iterate all delegator:
+
+- allDelegatorsLength(); Get all delegators count.
+- allDelegatorsAt(uint256 idx) -> address; Get validator's address based on idx, the range is 0 .. allDelegatorsLength().
+- allDelegatorsContains(address value); If an address is delegator, return true;
+
+Mapping of `validator` to `delegator`:
+
+
 
 
 
