@@ -18,7 +18,7 @@ Stake 3.123456 FRA, in Native FRA is: 312_3456_0000_0000_0000. this value is acc
 
 Stake 3.1234567 FRA, in Native is : 312_3456_7000_0000_0000. this value will be reject by Staking contract.
 
-**The above rule used for `msg.value`. Argument of contract decimal is 6.**
+**The above rule is only used for `msg.value`. Argument of contract decimal is 6.**
 
 ### Staking Operations
 
