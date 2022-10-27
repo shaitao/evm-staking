@@ -127,6 +127,14 @@ contract Staking is
 
     mapping(address => Delegator) public delegators;
 
+    function delegatorsBoundAmount(address delegator, address validator) public view returns(uint256) {
+        return delegators[delegator].boundAmount[validator];
+    }
+
+    function delegatorsUnboundAmount(address delegator, address validator) public view returns(uint256) {
+        return delegators[delegator].unboundAmount[validator];
+    }
+
     mapping(address => EnumerableSetUpgradeable.AddressSet)
         private delegatorOfValidator;
 
