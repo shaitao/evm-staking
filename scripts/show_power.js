@@ -7,21 +7,13 @@
 const { ethers, upgrades } = require("hardhat");
 
 async function main() {
-    const Staking = await ethers.getContractFactory("Staking");
-
-    const mc = await upgrades.deployProxy(Staking, ["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"]);
-
-    await mc.deployed();
-
-    console.log("Staking address:", mc.address);
-
     const Power = await ethers.getContractFactory("Power");
 
-    const p = await Power.deploy(mc.address, 10);
+    const power = await Power.attach("0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e");
 
-    await p.deployed();
+    let result = await power.getValidatorsList();
 
-    console.log("Power address:", p.address);
+    console.log("Power address:", result);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

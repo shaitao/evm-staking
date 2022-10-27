@@ -7,17 +7,11 @@
 const { ethers, upgrades } = require("hardhat");
 
 async function main() {
-    const Staking = await ethers.getContractFactory("Staking");
-
-    const mc = await upgrades.deployProxy(Staking, ["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"]);
-
-    await mc.deployed();
-
-    console.log("Staking address:", mc.address);
+    const stakingAddress = "0xc348500F57dF525ED102a0b024899bCD380FFF04";
 
     const Power = await ethers.getContractFactory("Power");
 
-    const p = await Power.deploy(mc.address, 10);
+    const p = await Power.deploy(stakingAddress, 10);
 
     await p.deployed();
 

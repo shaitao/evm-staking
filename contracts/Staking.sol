@@ -154,6 +154,8 @@ contract Staking is
         validatorOfDelegator[validator].add(delegator);
 
         totalDelegationAmount = totalDelegationAmount.add(amount);
+
+        allDelegators.add(delegator);
     }
 
     function _delDelegator(

@@ -7,9 +7,9 @@ import "./interfaces/IPower.sol";
 import "./Staking.sol";
 
 contract Power is Ownable, IBase, IPower {
-    address stakingAddress;
+    address public stakingAddress;
 
-    uint256 limit;
+    uint256 public limit;
 
     constructor(address stakingAddress_, uint256 limit_) {
         stakingAddress = stakingAddress_;
@@ -24,41 +24,58 @@ contract Power is Ownable, IBase, IPower {
         limit = limit_;
     }
 
-    function descSort(ValidatorInfo[] memory validators)
-        internal
-        pure
-        returns (ValidatorInfo[] memory)
-    {
-        for (uint256 i = 0; i < validators.length - 1; i++) {
-            for (uint256 j = 0; j < validators.length - 1 - i; j++) {
-                if (validators[j].power < validators[j + 1].power) {
-                    ValidatorInfo memory temp = validators[j];
-                    validators[j] = validators[j + 1];
-                    validators[j + 1] = temp;
-                }
-            }
-        }
-        return validators;
-    }
-
     function getValidatorsList() external override view returns(ValidatorInfo[] memory) {
         Staking staking = Staking(stakingAddress);
 
         uint256 len = staking.allValidatorsLength();
 
-        ValidatorInfo[] memory vi = new ValidatorInfo[](len);
+        uint256 length = len;
 
-        for(uint256 i = 0; i <= len; i ++) {
+        if (len < limit) {
+            length = len;
+        } else {
+            length = limit;
+        }
+
+        ValidatorInfo[] memory vi = new ValidatorInfo[](length);
+
+        uint256 minValue = staking.totalDelegationAmount();
+        uint256 minIndex = 0;
+
+        for(uint256 i = 0; i < len; i ++) {
             address validator = staking.allValidatorsAt(i);
 
             (bytes memory public_key, PublicKeyType ty, , , , uint256 power) = staking.validators(validator);
 
-            vi[i].public_key = public_key;
-            vi[i].ty = ty;
-            vi[i].addr = validator;
-            vi[i].power = power;
+            if (i < limit) {
+                vi[i].public_key = public_key;
+                vi[i].ty = ty;
+                vi[i].addr = validator;
+                vi[i].power = power;
+
+                if (power < minValue) {
+                    minValue = power;
+                    minIndex = i;
+                }
+            } else {
+                if (power > minValue) {
+                    vi[minIndex].public_key = public_key;
+                    vi[minIndex].ty = ty;
+                    vi[minIndex].addr = validator;
+                    vi[minIndex].power = power;
+
+                    // Find min value
+                    for(uint256 j = 0; j < limit; j ++) {
+                        if (power < minValue) {
+                            minValue = power;
+                            minIndex = j;
+                        }
+                    }
+                }
+            }
+
         }
 
-        return descSort(vi);
+        return vi;
     }
 }
