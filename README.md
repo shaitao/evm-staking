@@ -120,8 +120,8 @@ struct Validator {
 
 Delegators:
 
-- boundAmount: mapping(address => uint256); Delegate / Stake amount on validator. address is validator address.
-- unboundAmount: mapping(address => uint256); Total locked amount in undelegation.
+- delegatorsBoundAmount(address delegator, address validator); Delegate / Stake amount on validator. address is validator address.
+- delegatorsUnboundAmount(address delegator, address validator); Total locked amount in undelegation.
 - amount; Total amount for all validators.
 
 Iterate all delegator:

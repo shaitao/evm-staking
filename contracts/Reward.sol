@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import "./Staking.sol";
-import "./interfaces/ISystem.sol";
 import "./interfaces/IBase.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
@@ -12,11 +11,10 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     bytes32 public constant SYSTEM_ROLE = keccak256("SYSTEM");
+    bytes32 public constant RATE_DECIMAL = 10 ** 8;
 
     // Staking contract address
     address public stakingAddress;
-    // Power contract address
-    address public powerAddress;
 
     // Punish rate
     uint256 private duplicateVotePunishRate;
@@ -30,40 +28,25 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
     // Claim data
     ClaimOps[] public claimOps;
 
-    /*
-     *  APY：delegator return_rate records
-     * (height => reward rate)
-     */
-    mapping(uint256 => uint256[2]) public returnRateRecords;
-
-    struct PunishInfo {
-        address validator;
-        ByztineBehavior behavior;
-        uint256 power;
-    }
-
     event Punish(
         address punishAddress,
         ByztineBehavior behavior,
         uint256 amount
     );
+
     event Rewards(address rewardAddress, uint256 amount);
+
     event Claim(address claimAddress, uint256 amount);
 
     function initialize(
-        uint256 duplicateVotePunishRate_,
-        uint256 lightClientAttackPunishRate_,
-        uint256 offLinePunishRate_,
-        uint256 unknownPunishRate_,
-        address stakingAddress_,
-        address powerAddress_
+        address stakingAddress_
     ) public initializer {
-        duplicateVotePunishRate = duplicateVotePunishRate_;
-        lightClientAttackPunishRate = lightClientAttackPunishRate_;
-        offLinePunishRate = offLinePunishRate_;
-        unknownPunishRate = unknownPunishRate_;
+        duplicateVotePunishRate = 5 * 10 ** 6;
+        lightClientAttackPunishRate = 10 ** 6;
+        offLinePunishRate = 1;
+        unknownPunishRate = 30 * 10 ** 6;
         stakingAddress = stakingAddress_;
-        powerAddress = powerAddress_;
+
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
@@ -102,32 +85,29 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
     }
 
     // Get the data currently claiming
-    function GetClaimOps()
+    function getClaimOps()
         public
-        view
         onlyRole(SYSTEM_ROLE)
         returns (ClaimOps[] memory)
     {
-        return claimOps;
-    }
+        ClaimOps[] memory ops = claimOps;
 
-    // Clear the data currently claiming
-    function clearClaimOps() public onlyRole(SYSTEM_ROLE) {
         delete claimOps;
+
+        return ops;
     }
 
     // Distribute rewards
     function reward(
-        address validator, // proposer
+        address validator,
         address[] memory signed,
-        uint256 circulationAmount //
+        uint256 circulationAmount
     ) public onlyRole(SYSTEM_ROLE) {
         uint256[2] memory returnRateProposer;
-        // Validator/Proposer return_rate
         returnRateProposer = lastVotePercent(signed);
 
         Staking sc = Staking(stakingAddress);
-        uint256 totalDelegationAmount = sc.delegateTotal();
+        uint256 totalDelegationAmount = sc.totalDelegationAmount();
 
         // APY：delegator return_rate
         uint256[2] memory delegatorReturnRate;
@@ -135,7 +115,6 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
             totalDelegationAmount,
             circulationAmount
         );
-        returnRateRecords[block.number] = delegatorReturnRate;
 
         // 质押金额global_amount：所有用户质押金额
         // 质押金额total_amount（当前validator相关）：validator质押金额 + 其旗下delegator质押金额
@@ -143,26 +122,15 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
         // return_rate 分为两种，分别在上面已经计算
         // 计算公式：(am / total_amount) * (global_amount * ((return_rate[0] / return_rate[1]) / ((365 * 24 * 3600) / block_itv)))
 
-        // 解决栈太深，所以赋值新变量
-        address validatorCopy = validator;
         // 当前validator及旗下所有delegator质押金额
-        uint256 total_amount;
-        // 整个系统质押总额
-        uint256 global_amount = sc.delegateTotal();
+        uint256 validatorDelegationAmount = getPower(validator);
         // 出块周期
-        uint256 blockInterval = sc.blockInterval();
-        // 计算质押金额
-        address[] memory delegators = sc.getDelegatorsByValidator(
-            validatorCopy
-        );
-        for (uint256 i = 0; i < delegators.length; i++) {
-            total_amount += sc.getDelegateAmount(validatorCopy, delegators[i]);
-        }
+        uint256 blocktime = sc.blocktime();
 
         // 给proposer所有的delegator发放奖励,并返回所有delegator的总佣金
         uint256 totalCommission;
         totalCommission = rewardDelegator(
-            validatorCopy,
+            validator,
             delegators,
             total_amount,
             global_amount,
@@ -190,23 +158,6 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
         emit Rewards(validatorCopy, proposerRewards);
     }
 
-    function descSort(PunishInfo[] memory punishInfo)
-        internal
-        pure
-        returns (PunishInfo[] memory)
-    {
-        for (uint256 i = 0; i < punishInfo.length - 1; i++) {
-            for (uint256 j = 0; j < punishInfo.length - 1 - i; j++) {
-                if (punishInfo[j].power < punishInfo[j + 1].power) {
-                    PunishInfo memory temp = punishInfo[j];
-                    punishInfo[j] = punishInfo[j + 1];
-                    punishInfo[j + 1] = temp;
-                }
-            }
-        }
-        return punishInfo;
-    }
-
     // Punish validator and delegators
     function punish(
         address[] memory signed,
@@ -216,8 +167,6 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
     ) public onlyRole(SYSTEM_ROLE) {
         // Staking 合约对象
         Staking stakingContract = Staking(stakingAddress);
-        // Power 合约对象
-        Power powerContract = Power(stakingAddress);
         // Punish rate
         uint256[2] memory punishRate;
         // validator 质押金额
@@ -241,13 +190,13 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
             punishInfo[punishInfoIndex] = PunishInfo(
                 byztineCopy[i],
                 behavior[i],
-                powerContract.getPower(byztineCopy[i])
+                getPower(byztineCopy[i])
             );
 
             punishInfoIndex++;
         }
         // 按照质押金额倒叙重排
-        punishInfo = descSort(punishInfo);
+        // punishInfo = descSort(punishInfo);
         // 如果处罚信息数量过大，去掉多余处罚信息
         // punishInfo.length = validatorSetMaximum; 报错了，貌似只适合bytes字节数组，暂时换回下面方式
         for (uint256 a = 0; a < punishInfo.length; a++) {
@@ -348,13 +297,11 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
         returns (uint256[2] memory)
     {
         Staking sc = Staking(stakingAddress);
-        Power powerContract = Power(powerAddress);
-        uint256 totalPower = powerContract.powerTotal();
+        uint256 totalPower = sc.totalDelegationAmount();
         uint256 signedPower;
         for (uint256 i = 0; i < signed.length; i++) {
-            // 判断 签名地址是否是 validator
             if (sc.isValidator(signed[i])) {
-                signedPower += powerContract.getPower(signed[i]);
+                signedPower += getPower(signed[i]);
             }
         }
         uint256[2] memory votePercent = [signedPower, totalPower];
@@ -453,5 +400,13 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
             emit Rewards(delegators[i], delegatorRealReward);
         }
         return totalCommission;
+    }
+
+    function getPower(address validator) public view returns(uint256) {
+        Staking sc = Staking(stakingAddress);
+
+        (, , , , , uint256 power) = sc.validators(validator);
+
+        return power;
     }
 }
