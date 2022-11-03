@@ -144,9 +144,15 @@ Iterate `delegator` to `validator` . Get `delegator` stake to `validator`.
 - delegatorOfValidatorContains(address delegator, address value) -> bool; If a delegator stake / delegate to validator, return true.
 
 
+## Reward Operations
 
+### claim
 
+Use `claim(uint256 amount)` to claim data.
 
+### Read reward amount
+
+Use `rewards(address delegator)` to get rewards.
 
 
 
