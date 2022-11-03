@@ -44,7 +44,7 @@ async function main() {
 
     const Power = await ethers.getContractFactory("Staking");
 
-    const power = await Power.attach("0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0");
+    const power = await Power.attach("0x0676E2aDECe2b218eE036099288f2d69e3E42433");
 
     for (let v of validatos) {
         await power.adminStake(v.validator, v.public_key, v.staker, v.memo, v.rate, {

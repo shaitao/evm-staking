@@ -291,18 +291,44 @@ contract Staking is
 
     /// --- State of undelegation
 
-    struct UndelegationRecord {
+    struct UndelegationInfo {
         address validator;
         address payable delegator;
         uint256 amount;
         uint256 height;
     }
 
-    mapping(bytes32 => UndelegationRecord) public undelegations;
+    mapping(bytes32 => UndelegationInfo) public undelegations;
 
     EnumerableSetUpgradeable.Bytes32Set allUndelegations;
 
     /// --- End state of undelegation
+
+    /// --- Record for delegate and undelegate
+
+    enum RecordType {
+        Unknown,
+        Delegate,
+        Undelegate
+    }
+
+    struct Record {
+        uint256 height;
+        address validator;
+        address delegator;
+        uint256 amount;
+        RecordType ty;
+    }
+
+    mapping(address => bytes32[]) public delegatorRecordIndex;
+
+    function delegatorRecordIndexLength(address delegator) public view returns(uint256) {
+        return delegatorRecordIndex[delegator].length;
+    }
+
+    mapping(bytes32 => Record) public records;
+
+    /// --- End record for delegate and undelegate
 
     event Stake(
         bytes public_key,
@@ -356,6 +382,18 @@ contract Staking is
 
         _addDelegator(msg.sender, validator, amount);
 
+        /// record delegate
+        bytes32 idx = keccak256(abi.encode(block.number, validator, msg.sender, amount, uint256(1)));
+    
+        Record storage r = records[idx];
+        r.height = block.number;
+        r.validator = validator;
+        r.delegator = msg.sender;
+        r.amount = amount;
+        r.ty = RecordType.Delegate;
+
+        delegatorRecordIndex[msg.sender].push(idx);
+
         emit Stake(public_key, msg.sender, msg.value, memo, rate);
     }
 
@@ -375,6 +413,18 @@ contract Staking is
         require(amount <= maxDelegateAmount, "amount too large");
 
         _addDelegator(msg.sender, validator, msg.value);
+
+        /// record delegate
+        bytes32 idx = keccak256(abi.encode(block.number, validator, msg.sender, amount, uint256(1)));
+    
+        Record storage r = records[idx];
+        r.height = block.number;
+        r.validator = validator;
+        r.delegator = msg.sender;
+        r.amount = amount;
+        r.ty = RecordType.Delegate;
+
+        delegatorRecordIndex[msg.sender].push(idx);
 
         emit Delegation(validator, msg.sender, amount);
     }
@@ -396,8 +446,20 @@ contract Staking is
 
         bytes32 idx = keccak256(abi.encode(validator, amount, msg.sender, block.number));
 
-        undelegations[idx] = UndelegationRecord (validator, payable(msg.sender), amount, block.number);
+        undelegations[idx] = UndelegationInfo (validator, payable(msg.sender), amount, block.number);
         allUndelegations.add(idx);
+
+        /// record delegate
+        bytes32 idxx = keccak256(abi.encode(block.number, validator, msg.sender, amount, uint256(2)));
+    
+        Record storage r = records[idxx];
+        r.height = block.number;
+        r.validator = validator;
+        r.delegator = msg.sender;
+        r.amount = amount;
+        r.ty = RecordType.Undelegate;
+
+        delegatorRecordIndex[msg.sender].push(idxx);
 
         emit Undelegation(validator, msg.sender, amount);
     }
@@ -426,7 +488,7 @@ contract Staking is
         for (uint256 i; i < length; i++) {
             bytes32 idx = allUndelegations.at(i);
 
-            UndelegationRecord storage ur = undelegations[idx];
+            UndelegationInfo storage ur = undelegations[idx];
 
             // If this record reach target hright, send value and descrease amount.
             if ((blockNo - ur.height) >= unboundBlock) {

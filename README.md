@@ -154,5 +154,13 @@ Use `claim(uint256 amount)` to claim data.
 
 Use `rewards(address delegator)` to get rewards.
 
+## Record
 
+Record for delegate, undelegate and stake.
+
+### Iterate by delegator
+
+- Get length of record by `delegatorRecordIndexLength(address delegator) -> uint256`;
+- Iterate by index `delegatorRecordIndex(address delegator, uint256 at) -> bytes32`;
+- Get info of record by `records(bytes32 idx)`;
 

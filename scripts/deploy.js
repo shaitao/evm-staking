@@ -9,7 +9,7 @@ const { ethers, upgrades } = require("hardhat");
 async function main() {
     const Staking = await ethers.getContractFactory("Staking");
 
-    const mc = await upgrades.deployProxy(Staking, ["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"]);
+    const mc = await upgrades.deployProxy(Staking, ["0x72488baa718f52b76118c79168e55c209056a2e6"]);
 
     await mc.deployed();
 
