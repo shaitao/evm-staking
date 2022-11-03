@@ -9,6 +9,31 @@
       "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
       "txHash": "0xe9aa18506fe694f2022d9bb1f07b86f2b7f78893049fcd8c9e89d8de1660b563",
       "kind": "transparent"
+    },
+    {
+      "address": "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
+      "txHash": "0x41646e8a479192b11736ee9fd1774b281469ecac4b8c4da66fb88d4bab0799de",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x610178dA211FEF7D417bC0e6FeD39F05609AD788",
+      "txHash": "0x1fcfdf18fa62ac4a202a0f23dd95ad82b78692bc1bc3b85d910d5aed626444dd",
+      "kind": "transparent"
+    },
+    {
+      "address": "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
+      "txHash": "0x3f3a22a92364bf76aa9fd603d40c7d5f15a256c23ced5f7a413d65f404da8c3f",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x9A676e781A523b5d0C0e43731313A708CB607508",
+      "txHash": "0xa6c9f1e0f6eb099b15ea50204a0156cb80f9532b04eab8657f64a1db1aa8e14b",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE",
+      "txHash": "0xbfc55fb524067edb567c4acc60537a3d609625b38fa4e91fc8818f1cf5257441",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -439,6 +464,220 @@
               }
             ],
             "numberOfBytes": "224"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "c597f4ad03147ef56fdf84bc47263f3a0628eaf1a0ae8320377720ef0931aedf": {
+      "address": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
+      "txHash": "0x921a8861e847c35e020e641c8c6f369109b8dbe5cc21196ca6b050d3375371b9",
+      "layout": {
+        "solcVersion": "0.8.9",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "label": "_roles",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)2231_storage)",
+            "contract": "AccessControl",
+            "src": "@openzeppelin/contracts/access/AccessControl.sol:55"
+          },
+          {
+            "label": "_roleMembers",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_mapping(t_bytes32,t_struct(AddressSet)3350_storage)",
+            "contract": "AccessControlEnumerable",
+            "src": "@openzeppelin/contracts/access/AccessControlEnumerable.sol:16"
+          },
+          {
+            "label": "stakingAddress",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "Reward",
+            "src": "contracts/Reward.sol:17"
+          },
+          {
+            "label": "duplicateVotePunishRate",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_uint256",
+            "contract": "Reward",
+            "src": "contracts/Reward.sol:20"
+          },
+          {
+            "label": "lightClientAttackPunishRate",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_uint256",
+            "contract": "Reward",
+            "src": "contracts/Reward.sol:21"
+          },
+          {
+            "label": "offLinePunishRate",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_uint256",
+            "contract": "Reward",
+            "src": "contracts/Reward.sol:22"
+          },
+          {
+            "label": "unknownPunishRate",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_uint256",
+            "contract": "Reward",
+            "src": "contracts/Reward.sol:23"
+          },
+          {
+            "label": "rewards",
+            "offset": 0,
+            "slot": "8",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "Reward",
+            "src": "contracts/Reward.sol:26"
+          },
+          {
+            "label": "claimOps",
+            "offset": 0,
+            "slot": "9",
+            "type": "t_array(t_struct(ClaimOps)5241_storage)dyn_storage",
+            "contract": "Reward",
+            "src": "contracts/Reward.sol:29"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_bytes32)dyn_storage": {
+            "label": "bytes32[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(ClaimOps)5241_storage)dyn_storage": {
+            "label": "struct IBase.ClaimOps[]",
+            "numberOfBytes": "32"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(AddressSet)3350_storage)": {
+            "label": "mapping(bytes32 => struct EnumerableSet.AddressSet)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)2231_storage)": {
+            "label": "mapping(bytes32 => struct AccessControl.RoleData)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_uint256)": {
+            "label": "mapping(bytes32 => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(AddressSet)3350_storage": {
+            "label": "struct EnumerableSet.AddressSet",
+            "members": [
+              {
+                "label": "_inner",
+                "type": "t_struct(Set)3049_storage",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(ClaimOps)5241_storage": {
+            "label": "struct IBase.ClaimOps",
+            "members": [
+              {
+                "label": "addr",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "amount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(RoleData)2231_storage": {
+            "label": "struct AccessControl.RoleData",
+            "members": [
+              {
+                "label": "members",
+                "type": "t_mapping(t_address,t_bool)",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(Set)3049_storage": {
+            "label": "struct EnumerableSet.Set",
+            "members": [
+              {
+                "label": "_values",
+                "type": "t_array(t_bytes32)dyn_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_indexes",
+                "type": "t_mapping(t_bytes32,t_uint256)",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
           },
           "t_uint256": {
             "label": "uint256",

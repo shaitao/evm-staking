@@ -22,6 +22,13 @@ async function main() {
     await p.deployed();
 
     console.log("Power address:", p.address);
+
+    const Reward = await ethers.getContractFactory("Reward");
+    const reward = await upgrades.deployProxy(Reward, [mc.address]);
+
+    await reward.deployed();
+
+    console.log("Reward address:", reward.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
