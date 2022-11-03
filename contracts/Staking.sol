@@ -18,6 +18,7 @@ contract Staking is
     using AddressUpgradeable for address;
     using AddressUpgradeable for address payable;
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
+    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.Bytes32Set;
     using SafeMathUpgradeable for uint256;
 
     /// --- contract config for Staking ---
@@ -94,7 +95,10 @@ contract Staking is
         uint256 rate;
         // address of staker
         address staker;
+
         uint256 power;
+
+        uint256 beginBlock;
     }
 
     // address of tendermint => validator
@@ -200,6 +204,11 @@ contract Staking is
         Validator storage v = validators[validator];
         v.power = v.power.sub(amount);
 
+        if (v.power == 0) {
+            delete validators[validator];
+            allValidators.remove(validator);
+        }
+
         totalDelegationAmount = totalDelegationAmount.sub(amount);
     }
 
@@ -281,6 +290,7 @@ contract Staking is
     /// --- End state of total staking
 
     /// --- State of undelegation
+
     struct UndelegationRecord {
         address validator;
         address payable delegator;
@@ -288,8 +298,9 @@ contract Staking is
         uint256 height;
     }
 
-    // UnDelegation records
-    UndelegationRecord[] public undelegationRecords;
+    mapping(bytes32 => UndelegationRecord) public undelegations;
+
+    EnumerableSetUpgradeable.Bytes32Set allUndelegations;
 
     /// --- End state of undelegation
 
@@ -339,6 +350,7 @@ contract Staking is
         v.memo = memo;
         v.rate = rate;
         v.staker = msg.sender;
+        v.beginBlock = block.number;
 
         allValidators.add(validator);
 
@@ -382,15 +394,10 @@ contract Staking is
 
         _delDelegator(msg.sender, validator, amount);
 
-        // Push record
-        undelegationRecords.push(
-            UndelegationRecord(
-                validator,
-                payable(msg.sender),
-                amount,
-                block.number
-            )
-        );
+        bytes32 idx = keccak256(abi.encode(validator, amount, msg.sender, block.number));
+
+        undelegations[idx] = UndelegationRecord (validator, payable(msg.sender), amount, block.number);
+        allUndelegations.add(idx);
 
         emit Undelegation(validator, msg.sender, amount);
     }
@@ -414,8 +421,12 @@ contract Staking is
     function trigger() public onlyRole(SYSTEM_ROLE) {
         uint256 blockNo = block.number;
 
-        for (uint256 i; i < undelegationRecords.length; i++) {
-            UndelegationRecord storage ur = undelegationRecords[i];
+        uint256 length = allUndelegations.length();
+
+        for (uint256 i; i < length; i++) {
+            bytes32 idx = allUndelegations.at(i);
+
+            UndelegationRecord storage ur = undelegations[idx];
 
             // If this record reach target hright, send value and descrease amount.
             if ((blockNo - ur.height) >= unboundBlock) {

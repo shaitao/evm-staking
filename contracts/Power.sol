@@ -45,7 +45,7 @@ contract Power is Ownable, IBase, IPower {
         for(uint256 i = 0; i < len; i ++) {
             address validator = staking.allValidatorsAt(i);
 
-            (bytes memory public_key, PublicKeyType ty, , , , uint256 power) = staking.validators(validator);
+            (bytes memory public_key, PublicKeyType ty, , , , uint256 power, ) = staking.validators(validator);
 
             if (i < limit) {
                 vi[i].public_key = public_key;

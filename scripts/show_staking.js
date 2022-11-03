@@ -9,11 +9,16 @@ const { ethers, upgrades } = require("hardhat");
 async function main() {
     const S = await ethers.getContractFactory("Staking");
 
-    const s = await S.attach("0x610178dA211FEF7D417bC0e6FeD39F05609AD788");
+    const s = await S.attach("0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0");
 
-    let result = await s.totalDelegationAmount();
+    let r0 = await s.totalDelegationAmount();
 
-    console.log("total:", result);
+    console.log("total:", r0);
+
+
+    let r1 = await s.delegatorsBoundAmount("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", "0856654F7CD4BB0D6CC4409EF4892136C9D24692");
+    console.log("unbound:", r1);
+
 }
 
 // We recommend this pattern to be able to use async/await everywhere
