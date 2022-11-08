@@ -24,7 +24,12 @@ contract Power is Ownable, IBase, IPower {
         limit = limit_;
     }
 
-    function getValidatorsList() external override view returns(ValidatorInfo[] memory) {
+    function getValidatorsList()
+        external
+        view
+        override
+        returns (ValidatorInfo[] memory)
+    {
         Staking staking = Staking(stakingAddress);
 
         uint256 len = staking.allValidatorsLength();
@@ -42,10 +47,18 @@ contract Power is Ownable, IBase, IPower {
         uint256 minValue = staking.totalDelegationAmount();
         uint256 minIndex = 0;
 
-        for(uint256 i = 0; i < len; i ++) {
+        for (uint256 i = 0; i < len; i++) {
             address validator = staking.allValidatorsAt(i);
 
-            (bytes memory public_key, PublicKeyType ty, , , , uint256 power, ) = staking.validators(validator);
+            (
+                bytes memory public_key,
+                PublicKeyType ty,
+                ,
+                ,
+                ,
+                uint256 power,
+
+            ) = staking.validators(validator);
 
             if (i < limit) {
                 vi[i].public_key = public_key;
@@ -65,7 +78,7 @@ contract Power is Ownable, IBase, IPower {
                     vi[minIndex].power = power;
 
                     // Find min value
-                    for(uint256 j = 0; j < limit; j ++) {
+                    for (uint256 j = 0; j < limit; j++) {
                         if (power < minValue) {
                             minValue = power;
                             minIndex = j;
@@ -73,7 +86,6 @@ contract Power is Ownable, IBase, IPower {
                     }
                 }
             }
-
         }
 
         return vi;

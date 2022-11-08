@@ -77,7 +77,7 @@ contract System is Ownable, IBase {
         // return claimOps;
     }
 
-    function getValidatorsList() external returns(ValidatorInfo[] memory) {
+    function getValidatorsList() external returns (ValidatorInfo[] memory) {
         IPower power = IPower(powerAddress);
 
         return power.getValidatorsList();

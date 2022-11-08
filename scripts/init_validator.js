@@ -48,7 +48,7 @@ async function main() {
 
     for (let v of validatos) {
         await power.adminStake(v.validator, v.public_key, v.staker, v.memo, v.rate, {
-            value: ethers.utils.parseEther("1"),
+            value: ethers.utils.parseEther("10"),
         });
         console.log("stake: ", v.validator);
     }

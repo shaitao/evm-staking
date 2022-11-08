@@ -95,9 +95,7 @@ contract Staking is
         uint256 rate;
         // address of staker
         address staker;
-
         uint256 power;
-
         uint256 beginBlock;
     }
 
@@ -131,11 +129,19 @@ contract Staking is
 
     mapping(address => Delegator) public delegators;
 
-    function delegatorsBoundAmount(address delegator, address validator) public view returns(uint256) {
+    function delegatorsBoundAmount(address delegator, address validator)
+        public
+        view
+        returns (uint256)
+    {
         return delegators[delegator].boundAmount[validator];
     }
 
-    function delegatorsUnboundAmount(address delegator, address validator) public view returns(uint256) {
+    function delegatorsUnboundAmount(address delegator, address validator)
+        public
+        view
+        returns (uint256)
+    {
         return delegators[delegator].unboundAmount[validator];
     }
 
@@ -322,7 +328,11 @@ contract Staking is
 
     mapping(address => bytes32[]) public delegatorRecordIndex;
 
-    function delegatorRecordIndexLength(address delegator) public view returns(uint256) {
+    function delegatorRecordIndexLength(address delegator)
+        public
+        view
+        returns (uint256)
+    {
         return delegatorRecordIndex[delegator].length;
     }
 
@@ -383,8 +393,10 @@ contract Staking is
         _addDelegator(msg.sender, validator, amount);
 
         /// record delegate
-        bytes32 idx = keccak256(abi.encode(block.number, validator, msg.sender, amount, uint256(1)));
-    
+        bytes32 idx = keccak256(
+            abi.encode(block.number, validator, msg.sender, amount, uint256(1))
+        );
+
         Record storage r = records[idx];
         r.height = block.number;
         r.validator = validator;
@@ -415,8 +427,10 @@ contract Staking is
         _addDelegator(msg.sender, validator, msg.value);
 
         /// record delegate
-        bytes32 idx = keccak256(abi.encode(block.number, validator, msg.sender, amount, uint256(1)));
-    
+        bytes32 idx = keccak256(
+            abi.encode(block.number, validator, msg.sender, amount, uint256(1))
+        );
+
         Record storage r = records[idx];
         r.height = block.number;
         r.validator = validator;
@@ -438,20 +452,29 @@ contract Staking is
 
         Delegator storage d = delegators[msg.sender];
         require(
-            amount < d.boundAmount[validator],
+            amount <= d.boundAmount[validator],
             "amount greater than bound amount"
         );
 
         _delDelegator(msg.sender, validator, amount);
 
-        bytes32 idx = keccak256(abi.encode(validator, amount, msg.sender, block.number));
+        bytes32 idx = keccak256(
+            abi.encode(validator, amount, msg.sender, block.number)
+        );
 
-        undelegations[idx] = UndelegationInfo (validator, payable(msg.sender), amount, block.number);
+        undelegations[idx] = UndelegationInfo(
+            validator,
+            payable(msg.sender),
+            amount,
+            block.number
+        );
         allUndelegations.add(idx);
 
         /// record delegate
-        bytes32 idxx = keccak256(abi.encode(block.number, validator, msg.sender, amount, uint256(2)));
-    
+        bytes32 idxx = keccak256(
+            abi.encode(block.number, validator, msg.sender, amount, uint256(2))
+        );
+
         Record storage r = records[idxx];
         r.height = block.number;
         r.validator = validator;

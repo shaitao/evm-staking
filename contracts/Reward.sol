@@ -11,16 +11,16 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     bytes32 public constant SYSTEM_ROLE = keccak256("SYSTEM");
-    uint256 public constant RATE_DECIMAL = 10 ** 8;
+    uint256 public constant RATE_DECIMAL = 10**8;
 
     // Staking contract address
     address public stakingAddress;
 
     // Punish rate
-    uint256 private duplicateVotePunishRate;
-    uint256 private lightClientAttackPunishRate;
-    uint256 private offLinePunishRate;
-    uint256 private unknownPunishRate;
+    uint256 public duplicateVotePunishRate;
+    uint256 public lightClientAttackPunishRate;
+    uint256 public offLinePunishRate;
+    uint256 public unknownPunishRate;
 
     // (reward address => reward amount)
     mapping(address => uint256) public rewards;
@@ -38,15 +38,17 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
 
     event Claim(address claimAddress, uint256 amount);
 
-    function initialize(
-        address stakingAddress_
-    ) public initializer {
-        duplicateVotePunishRate = 5 * 10 ** 6;
-        lightClientAttackPunishRate = 10 ** 6;
+    function initialize(address stakingAddress_, address systemAddress_)
+        public
+        initializer
+    {
+        duplicateVotePunishRate = 5 * 10**6;
+        lightClientAttackPunishRate = 10**6;
         offLinePunishRate = 1;
-        unknownPunishRate = 30 * 10 ** 6;
+        unknownPunishRate = 30 * 10**6;
         stakingAddress = stakingAddress_;
 
+        _setupRole(SYSTEM_ROLE, systemAddress_);
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
@@ -86,7 +88,11 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
         claimOps.push(ClaimOps(delegator, amount));
     }
 
-//     // Get the data currently claiming
+    function adminReward(address delegator, uint256 amount) public onlyRole(SYSTEM_ROLE) {
+        rewards[delegator] = amount;
+    }
+
+    //     // Get the data currently claiming
     // function getClaimOps()
     //     public
     //     onlyRole(SYSTEM_ROLE)
@@ -403,8 +409,8 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
     //     }
     //     return totalCommission;
     // }
-//
-    function getPower(address validator) public view returns(uint256) {
+    //
+    function getPower(address validator) public view returns (uint256) {
         Staking sc = Staking(stakingAddress);
 
         (, , , , , uint256 power, ) = sc.validators(validator);
