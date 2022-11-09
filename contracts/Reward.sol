@@ -90,24 +90,27 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
         emit Claim(msg.sender, amount);
     }
 
-    function adminReward(address delegator, uint256 amount) public onlyRole(SYSTEM_ROLE) {
+    function adminReward(address delegator, uint256 amount)
+        public
+        onlyRole(SYSTEM_ROLE)
+    {
         rewards[delegator] = amount;
     }
 
-    //     // Get the data currently claiming
-    // function getClaimOps()
-    //     public
-    //     onlyRole(SYSTEM_ROLE)
-    //     returns (ClaimOps[] memory)
-    // {
-    //     ClaimOps[] memory ops = claimOps;
-    //
-    //     delete claimOps;
-    //
-    //     return ops;
-    // }
-    //
-    // // Distribute rewards
+    // Get the data currently claiming
+    function getClaimOps()
+        public
+        onlyRole(SYSTEM_ROLE)
+        returns (ClaimOps[] memory)
+    {
+        ClaimOps[] memory ops = claimOps;
+
+        delete claimOps;
+
+        return ops;
+    }
+
+//     // Distribute rewards
     // function reward(
     //     address validator,
     //     address[] memory signed,
@@ -167,7 +170,7 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
     //
     //     emit Rewards(validatorCopy, proposerRewards);
     // }
-    //
+//
     // // Punish validator and delegators
     // function punish(
     //     address[] memory signed,
@@ -300,123 +303,151 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
     //     }
     // }
     //
-    // // Get last vote percent
-    // function lastVotePercent(address[] memory signed)
-    //     public
-    //     view
-    //     returns (uint256[2] memory)
-    // {
-    //     Staking sc = Staking(stakingAddress);
-    //     uint256 totalPower = sc.totalDelegationAmount();
-    //     uint256 signedPower;
-    //     for (uint256 i = 0; i < signed.length; i++) {
-    //         if (sc.isValidator(signed[i])) {
-    //             signedPower += getPower(signed[i]);
-    //         }
-    //     }
-    //     uint256[2] memory votePercent = [signedPower, totalPower];
-    //     return votePercent;
-    // }
-    //
-    // // Get block rewards-rate,计算APY,传入 全局质押比
-    // function getBlockReturnRate(
-    //     uint256 delegationPercent0,
-    //     uint256 delegationPercent1
-    // ) public pure returns (uint256[2] memory) {
-    //     uint256 a0 = delegationPercent0 * 536;
-    //     uint256 a1 = delegationPercent1 * 10000;
-    //     if (a0 * 100 > a1 * 268) {
-    //         a0 = 268;
-    //         a1 = 100;
-    //     } else if (a0 * 1000 < a1 * 54) {
-    //         a0 = 54;
-    //         a1 = 1000;
-    //     }
-    //     uint256[2] memory rewardsRate = [a0, a1];
-    //     return rewardsRate;
-    // }
-    //
-    // // Get punish rate
-    // function getPunishRate(ByztineBehavior byztineBehavior, bool isOnLine)
-    //     internal
-    //     view
-    //     returns (uint256[2] memory)
-    // {
-    //     uint256[2] memory punishRate;
-    //     if (!isOnLine) {
-    //         punishRate = [offLinePunishRate, 10**18];
-    //     } else if (byztineBehavior == ByztineBehavior.DuplicateVote) {
-    //         punishRate = [duplicateVotePunishRate, 10**18];
-    //     } else if (byztineBehavior == ByztineBehavior.LightClientAttack) {
-    //         punishRate = [lightClientAttackPunishRate, 10**18];
-    //     } else if (byztineBehavior == ByztineBehavior.Unknown) {
-    //         punishRate = [unknownPunishRate, 10**18];
-    //     }
-    //
-    //     return punishRate;
-    // }
-    //
-    // // 给proposer所有的delegator发放奖励
-    // function rewardDelegator(
-    //     address proposer,
-    //     address[] memory delegatorsOfValidator,
-    //     uint256 total_amount,
-    //     uint256 global_amount,
-    //     uint256[2] memory returnRate,
-    //     uint256 blockInterval
-    // ) internal returns (uint256) {
-    //     Staking sc = Staking(stakingAddress);
-    //
-    //     // 佣金比例
-    //     uint256 commissionRate = sc.getValidatorRate(proposer);
-    //     //
-    //     uint256 am;
-    //     // 佣金
-    //     uint256 commission;
-    //     // 按照质押比例给某个delegator发放的奖励金额
-    //     uint256 delegatorReward;
-    //     // 按照质押比例给某个delegator，减去佣金后实际发放的奖励金额
-    //     uint256 delegatorRealReward;
-    //     // 为了解决栈太深，重新赋值新变量
-    //     address validator = proposer;
-    //     // 所有delegator的总佣金
-    //     uint256 totalCommission;
-    //
-    //     // 重新赋值新变量，解决栈太深
-    //     address[] memory delegators = delegatorsOfValidator;
-    //     for (uint256 i = 0; i < delegators.length; i++) {
-    //         am = sc.getDelegateAmount(validator, delegators[i]);
-    //         // (d.reward * am)/d.amount(delegator所有的质押金额)
-    //         am +=
-    //             (rewords[delegators[i]] * am) /
-    //             sc.getDelegateTotalAmount(delegators[i]);
-    //         // 带佣金的奖励
-    //         delegatorReward =
-    //             (am / total_amount) *
-    //             (global_amount *
-    //                 ((returnRate[0] / returnRate[1]) /
-    //                     ((365 * 24 * 3600) / blockInterval)));
-    //         // 佣金，佣金给到这个validator的self-delegator的delegation之中
-    //         commission = delegatorReward * commissionRate;
-    //         totalCommission += commission;
-    //         // 实际分配给delegator的奖励， 奖励需要按佣金比例扣除佣金,最后剩下的才是奖励
-    //         delegatorRealReward = delegatorReward - commission;
-    //         // 格式化奖励金额，将后12位置为0
-    //         delegatorRealReward = (delegatorRealReward / (10**12)) * (10**12);
-    //         // 增加delegator reward金额
-    //         rewords[delegators[i]] += delegatorRealReward;
-    //
-    //         // 事件日志
-    //         emit Rewards(delegators[i], delegatorRealReward);
-    //     }
-    //     return totalCommission;
-    // }
-    //
+    // Get last vote percent
+    function lastVotePercent(address[] memory signed)
+        public
+        view
+        returns (uint256[2] memory)
+    {
+        Staking sc = Staking(stakingAddress);
+        uint256 totalPower = sc.totalDelegationAmount();
+        uint256 signedPower;
+        for (uint256 i = 0; i < signed.length; i++) {
+            if (isValidator(signed[i])) {
+                signedPower += getPower(signed[i]);
+            }
+        }
+        uint256[2] memory votePercent = [signedPower, totalPower];
+        return votePercent;
+    }
+
+    // Get block rewards-rate,计算APY,传入 全局质押比
+    function getBlockReturnRate(
+        uint256 delegationPercent0,
+        uint256 delegationPercent1
+    ) public pure returns (uint256[2] memory) {
+        uint256 a0 = delegationPercent0 * 536;
+        uint256 a1 = delegationPercent1 * 10000;
+        if (a0 * 100 > a1 * 268) {
+            a0 = 268;
+            a1 = 100;
+        } else if (a0 * 1000 < a1 * 54) {
+            a0 = 54;
+            a1 = 1000;
+        }
+        uint256[2] memory rewardsRate = [a0, a1];
+        return rewardsRate;
+    }
+
+    // Get punish rate
+    function getPunishRate(ByztineBehavior byztineBehavior, bool isOnLine)
+        internal
+        view
+        returns (uint256[2] memory)
+    {
+        uint256[2] memory punishRate;
+        if (!isOnLine) {
+            punishRate = [offLinePunishRate, RATE_DECIMAL];
+        } else if (byztineBehavior == ByztineBehavior.DuplicateVote) {
+            punishRate = [duplicateVotePunishRate, RATE_DECIMAL];
+        } else if (byztineBehavior == ByztineBehavior.LightClientAttack) {
+            punishRate = [lightClientAttackPunishRate, RATE_DECIMAL];
+        } else if (byztineBehavior == ByztineBehavior.Unknown) {
+            punishRate = [unknownPunishRate, RATE_DECIMAL];
+        }
+
+        return punishRate;
+    }
+
+    // 给proposer所有的delegator发放奖励
+    function rewardDelegator(
+        address proposer,
+        address[] calldata delegators,
+        uint256 total_amount,
+        uint256 global_amount,
+        uint256[2] calldata returnRate,
+        uint256 blockInterval
+    ) internal returns (uint256) {
+        // 佣金比例
+        uint256 commissionRate = getRate(proposer);
+        //
+        uint256 am;
+        // 佣金
+        uint256 commission;
+        // 按照质押比例给某个delegator发放的奖励金额
+        uint256 delegatorReward;
+        // 按照质押比例给某个delegator，减去佣金后实际发放的奖励金额
+        uint256 delegatorRealReward;
+        // 为了解决栈太深，重新赋值新变量
+        address validator = proposer;
+        // 所有delegator的总佣金
+        uint256 totalCommission;
+
+        // 重新赋值新变量，解决栈太深
+        for (uint256 i = 0; i < delegators.length; i++) {
+            am = getDelegatorAmountOfValidator(validator, delegators[i]);
+            // (d.reward * am)/d.amount(delegator所有的质押金额)
+            am +=
+                (rewards[delegators[i]] * am) /
+                getDelegatorTotalAmount(delegators[i]);
+            // 带佣金的奖励
+            delegatorReward =
+                (am / total_amount) *
+                (global_amount *
+                    ((returnRate[0] / returnRate[1]) /
+                        ((365 * 24 * 3600) / blockInterval)));
+            // 佣金，佣金给到这个validator的self-delegator的delegation之中
+            commission = delegatorReward * commissionRate;
+            totalCommission += commission;
+            // 实际分配给delegator的奖励， 奖励需要按佣金比例扣除佣金,最后剩下的才是奖励
+            delegatorRealReward = delegatorReward - commission;
+            // 增加delegator reward金额
+            rewards[delegators[i]] += delegatorRealReward;
+
+            // 事件日志
+            emit Rewards(delegators[i], delegatorRealReward);
+        }
+        return totalCommission;
+    }
+
     function getPower(address validator) public view returns (uint256) {
         Staking sc = Staking(stakingAddress);
 
         (, , , , , uint256 power, ) = sc.validators(validator);
 
         return power;
+    }
+
+    function isValidator(address validator) public view returns (bool) {
+        Staking sc = Staking(stakingAddress);
+
+        (, , , , address staker, , ) = sc.validators(validator);
+
+        return staker == address(0);
+    }
+
+    function getRate(address validator) public view returns (uint256) {
+        Staking sc = Staking(stakingAddress);
+
+        (, , , uint256 rate, , , ) = sc.validators(validator);
+
+        return rate;
+    }
+
+    function getDelegatorAmountOfValidator(address delegator, address validator) public view returns (uint256) {
+        Staking sc = Staking(stakingAddress);
+
+        uint256 unbound = sc.delegatorsUnboundAmount(delegator, validator);
+        uint256 bound = sc.delegatorsBoundAmount(delegator, validator);
+
+        return unbound + bound;
+    }
+
+    function getDelegatorTotalAmount(address delegator) public view returns (uint256) {
+        Staking sc = Staking(stakingAddress);
+
+        (uint256 amount) = sc.delegators(delegator);
+
+        return amount;
     }
 }
