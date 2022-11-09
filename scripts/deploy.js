@@ -24,7 +24,7 @@ async function main() {
     console.log("Power address:", p.address);
 
     const Reward = await ethers.getContractFactory("Reward");
-    const reward = await upgrades.deployProxy(Reward, [mc.address]);
+    const reward = await upgrades.deployProxy(Reward, [mc.address, "0x72488baa718f52b76118c79168e55c209056a2e6"]);
 
     await reward.deployed();
 

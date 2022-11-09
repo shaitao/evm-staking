@@ -424,7 +424,7 @@ contract Staking is
 
         require(amount <= maxDelegateAmount, "amount too large");
 
-        _addDelegator(msg.sender, validator, msg.value);
+        _addDelegator(msg.sender, validator, amount);
 
         /// record delegate
         bytes32 idx = keccak256(

@@ -86,6 +86,8 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
         require(rewards[delegator] >= amount, "insufficient amount");
         rewards[delegator] -= amount;
         claimOps.push(ClaimOps(delegator, amount));
+
+        emit Claim(msg.sender, amount);
     }
 
     function adminReward(address delegator, uint256 amount) public onlyRole(SYSTEM_ROLE) {
