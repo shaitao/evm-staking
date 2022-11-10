@@ -24,6 +24,7 @@ contract Staking is
     /// --- contract config for Staking ---
 
     bytes32 public constant SYSTEM_ROLE = keccak256("SYSTEM");
+    bytes32 public constant POWER_ROLE = keccak256("POWER_ROLE");
     uint256 public constant FRA_UNITS = 10**6;
 
     /// --- End contract config for staking ---
@@ -503,7 +504,7 @@ contract Staking is
     }
 
     // Return unDelegate assets
-    function trigger() public onlyRole(SYSTEM_ROLE) {
+    function trigger() public override onlyRole(SYSTEM_ROLE) {
         uint256 blockNo = block.number;
 
         uint256 length = allUndelegations.length();
@@ -567,6 +568,31 @@ contract Staking is
         _addDelegator(delegator, validator, msg.value);
 
         emit Delegation(validator, delegator, amount);
+    }
+
+    // -------- Function of power operation
+
+    function powerDesc(
+        address validator,
+        address delegator,
+        uint256 amount
+    ) public onlyRole(POWER_ROLE) {
+        uint256 bound = delegatorsBoundAmount(delegator, validator);
+
+        uint256 realAmount;
+
+        if (bound > amount) {
+            realAmount = amount;
+        } else {
+            realAmount = bound;
+        }
+        delegators[delegator].boundAmount[validator] -= realAmount;
+        delegators[delegator].amount -= realAmount;
+
+        Validator storage v = validators[validator];
+        v.power -= realAmount;
+
+        totalDelegationAmount -= realAmount;
     }
 
     // -------- utils function

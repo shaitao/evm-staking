@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 import "./interfaces/IBase.sol";
 import "./interfaces/IStaking.sol";
 import "./interfaces/IPower.sol";
+import "./interfaces/IReward.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -51,33 +52,37 @@ contract System is Ownable, IBase {
 
     function trigger(
         address proposer,
-        address[] memory signed,
+        address[] memory unsigned,
         uint256 circulationAmount,
         address[] memory byztine,
         ByztineBehavior[] memory behavior
     ) external {
-        // Return unDelegate assets
-        IStaking staking = IStaking(stakingAddress);
-        staking.trigger();
+        if (stakingAddress != address(0)) {
+            // Return unDelegate assets
+            IStaking staking = IStaking(stakingAddress);
+            staking.trigger();
+        }
 
-        // // Reward
-        // Reward reward = Reward(rewardAddress);
-        // reward.reward(proposer, signed, circulationAmount);
-
-        // // Punish
-        // reward.punish(signed, byztine, behavior, validatorSetMaximum);
+        if (rewardAddress != address(0)) {
+            IReward reward = IReward(rewardAddress);
+            // reward.reward(proposer, signed, circulationAmount);
+            reward.punish(unsigned, byztine, behavior);
+        }
     }
 
     // Get data currently claiming
-    function getClaimOps() external returns (ClaimOps[] memory) {
-        // ClaimOps[] memory claimOps;
-        // Reward reward = Reward(rewardAddress);
-        // claimOps = reward.GetClaimOps();
-        // reward.clearClaimOps();
-        // return claimOps;
+    function getClaimOps() external returns (ClaimOps[] memory ops) {
+        if (rewardAddress != address(0)) {
+            IReward reward = IReward(rewardAddress);
+            return reward.getClaimOps();
+        }
     }
 
-    function getValidatorsList() external returns (ValidatorInfo[] memory) {
+    function getValidatorsList()
+        external
+        view
+        returns (ValidatorInfo[] memory)
+    {
         IPower power = IPower(powerAddress);
 
         return power.getValidatorsList();

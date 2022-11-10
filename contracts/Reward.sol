@@ -2,12 +2,12 @@
 pragma solidity ^0.8.9;
 
 import "./Staking.sol";
-import "./interfaces/IBase.sol";
+import "./interfaces/IReward.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract Reward is Initializable, AccessControlEnumerable, IBase {
+contract Reward is Initializable, AccessControlEnumerable, IReward {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     bytes32 public constant SYSTEM_ROLE = keccak256("SYSTEM");
@@ -99,8 +99,9 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
 
     // Get the data currently claiming
     function getClaimOps()
-        public
+        external
         onlyRole(SYSTEM_ROLE)
+        override
         returns (ClaimOps[] memory)
     {
         ClaimOps[] memory ops = claimOps;
@@ -110,7 +111,7 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
         return ops;
     }
 
-//     // Distribute rewards
+    //     // Distribute rewards
     // function reward(
     //     address validator,
     //     address[] memory signed,
@@ -138,7 +139,7 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
     //     // 当前validator及旗下所有delegator质押金额
     //     uint256 validatorDelegationAmount = getPower(validator);
     //     // 出块周期
-    //     uint256 blocktime = sc.blocktime();
+    //     uint256 blocktime = scpunishInfoRes.blocktime();
     //
     //     // 给proposer所有的delegator发放奖励,并返回所有delegator的总佣金
     //     uint256 totalCommission;
@@ -170,139 +171,85 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
     //
     //     emit Rewards(validatorCopy, proposerRewards);
     // }
-//
-    // // Punish validator and delegators
-    // function punish(
-    //     address[] memory signed,
-    //     address[] memory byztine,
-    //     ByztineBehavior[] memory behavior,
-    //     uint256 validatorSetMaximum
-    // ) public onlyRole(SYSTEM_ROLE) {
-    //     // Staking 合约对象
-    //     Staking stakingContract = Staking(stakingAddress);
-    //     // Punish rate
-    //     uint256[2] memory punishRate;
-    //     // validator 质押金额
-    //     uint256 validatorDelegateAmount;
-    //     // validator 被处罚金额
-    //     uint256 validatorPunishAmount;
-    //     // 解决栈太深，重新赋值新变量
-    //     address[] memory byztineCopy = byztine;
-    //     // 被处罚的validator信息（账户地址、处罚金额，被处罚行为）
-    //     PunishInfo[] memory punishInfo;
-    //     // punishInfo 数组索引
-    //     uint256 punishInfoIndex;
-    //     // 被处罚的validator信息（已做好降序排列，并且根据数量限制去除无效处罚信息）
-    //     PunishInfo[] memory punishInfoRes;
-    //     for (uint256 i = 0; i < byztineCopy.length; i++) {
-    //         // Check whether the byztine is a validator
-    //         if (!stakingContract.isValidator(byztineCopy[i])) {
-    //             continue;
-    //         }
-    //
-    //         punishInfo[punishInfoIndex] = PunishInfo(
-    //             byztineCopy[i],
-    //             behavior[i],
-    //             getPower(byztineCopy[i])
-    //         );
-    //
-    //         punishInfoIndex++;
-    //     }
-    //     // 按照质押金额倒叙重排
-    //     // punishInfo = descSort(punishInfo);
-    //     // 如果处罚信息数量过大，去掉多余处罚信息
-    //     // punishInfo.length = validatorSetMaximum; 报错了，貌似只适合bytes字节数组，暂时换回下面方式
-    //     for (uint256 a = 0; a < punishInfo.length; a++) {
-    //         if (a >= validatorSetMaximum) {
-    //             break;
-    //         }
-    //     }
-    //
-    //     bool isOnLine;
-    //     address[] memory signedValidators = signed;
-    //     // 解决栈太深，重新赋值新变量
-    //     Staking sc = Staking(stakingAddress);
-    //     for (uint256 i = 0; i < punishInfoRes.length; i++) {
-    //         // 计算punish rate
-    //         {
-    //             for (uint256 h = 0; h < signedValidators.length; h++) {
-    //                 if (signedValidators[h] == punishInfoRes[i].validator) {
-    //                     isOnLine = true;
-    //                 }
-    //             }
-    //             punishRate = getPunishRate(punishInfoRes[i].behavior, isOnLine);
-    //         }
-    //
-    //         // 解决栈太深，重新赋值新变量
-    //         uint256[2] memory delegatorPunishRate = punishRate;
-    //
-    //         // 处罚 validator
-    //         validatorDelegateAmount = sc.getDelegateAmount(
-    //             punishInfoRes[i].validator,
-    //             punishInfoRes[i].validator
-    //         );
-    //         validatorPunishAmount =
-    //             (validatorDelegateAmount * punishRate[0]) /
-    //             punishRate[1];
-    //         sc.descDelegateAmountAndPower(
-    //             punishInfoRes[i].validator,
-    //             punishInfoRes[i].validator,
-    //             validatorPunishAmount
-    //         );
-    //
-    //         emit Punish(
-    //             punishInfoRes[i].validator,
-    //             punishInfoRes[i].behavior,
-    //             validatorPunishAmount
-    //         );
-    //
-    //         // 处罚validator的delegators
-    //         address[] memory delegators = sc.getDelegatorsByValidator(
-    //             punishInfoRes[i].validator
-    //         );
-    //         // 质押金额
-    //         uint256 delegateAmount;
-    //         // 处罚金额
-    //         uint256 punishAmount;
-    //         // 实际处罚金额
-    //         uint256 realPunishAmount;
-    //
-    //         for (uint256 j = 0; j < delegators.length; j++) {
-    //             delegateAmount = sc.getDelegateAmount(
-    //                 delegators[j],
-    //                 punishInfoRes[i].validator
-    //             );
-    //             punishAmount =
-    //                 (delegateAmount * delegatorPunishRate[0]) /
-    //                 delegatorPunishRate[1];
-    //
-    //             // 处罚金额小于质押金额
-    //             realPunishAmount = punishAmount;
-    //             if (punishAmount > (delegateAmount + rewords[delegators[j]])) {
-    //                 // 处罚金额大于质押金额和奖励金额之和，就将质押金额和奖励金额清零
-    //                 realPunishAmount = delegateAmount + rewords[delegators[j]];
-    //                 rewords[delegators[j]] = 0;
-    //             } else if (punishAmount > delegateAmount) {
-    //                 // 处罚金额大于质押金额，就将质押金额清零,然后扣除一部分奖励
-    //                 realPunishAmount = punishAmount;
-    //                 rewords[delegators[j]] -= punishAmount - delegateAmount;
-    //             }
-    //
-    //             sc.descDelegateAmountAndPower(
-    //                 punishInfoRes[i].validator,
-    //                 delegators[j],
-    //                 realPunishAmount
-    //             );
-    //
-    //             emit Punish(
-    //                 delegators[j],
-    //                 punishInfoRes[i].behavior,
-    //                 realPunishAmount
-    //             );
-    //         }
-    //     }
-    // }
-    //
+
+    // Punish validator and delegators
+    function punish(
+        address[] calldata unsigned,
+        address[] calldata byztine,
+        ByztineBehavior[] calldata behavior
+    ) external override onlyRole(SYSTEM_ROLE) {
+        Staking sc = Staking(stakingAddress);
+
+        // punish byztine
+        for (uint256 i = 0; i < unsigned.length; i++) {
+            address validator = unsigned[i];
+            uint256 delegators_length = sc.validatorOfDelegatorLength(
+                validator
+            );
+
+            for (uint256 j = 0; j < delegators_length; j++) {
+                address delegator = sc.validatorOfDelegatorAt(validator, j);
+
+                uint256 amount = getDelegatorAmountOfValidator(
+                    delegator,
+                    validator
+                );
+
+                uint256 punishAmount = (amount * offLinePunishRate) /
+                    RATE_DECIMAL;
+
+                doPunish(validator, delegator, punishAmount);
+            }
+        }
+
+        // punish byztine
+        for (uint256 i = 0; i < byztine.length; i++) {
+            address validator = byztine[i];
+
+            uint256 delegators_length = sc.validatorOfDelegatorLength(
+                validator
+            );
+
+            for (uint256 j = 0; j < delegators_length; j++) {
+                address delegator = sc.validatorOfDelegatorAt(validator, j);
+
+                uint256 amount = getDelegatorAmountOfValidator(
+                    delegator,
+                    validator
+                );
+
+                uint256 punishAmount = (amount * getPunishRate(behavior[i])) /
+                    RATE_DECIMAL;
+
+                doPunish(validator, delegator, punishAmount);
+            }
+        }
+    }
+
+    function doPunish(
+        address validator,
+        address delegator,
+        uint256 punishAmount
+    ) internal {
+        Staking sc = Staking(stakingAddress);
+
+        uint256 amount = sc.delegatorsBoundAmount(delegator, validator);
+
+        if (amount < punishAmount) {
+            uint256 remainingPunishAmount = punishAmount - amount;
+
+            // Set delegate amount to zero
+
+            if (rewards[delegator] > remainingPunishAmount) {
+                rewards[delegator] -= remainingPunishAmount;
+            } else {
+                rewards[delegator] = 0;
+            }
+        }
+
+        sc.powerDesc(validator, delegator, punishAmount);
+    }
+
     // Get last vote percent
     function lastVotePercent(address[] memory signed)
         public
@@ -339,26 +286,6 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
         return rewardsRate;
     }
 
-    // Get punish rate
-    function getPunishRate(ByztineBehavior byztineBehavior, bool isOnLine)
-        internal
-        view
-        returns (uint256[2] memory)
-    {
-        uint256[2] memory punishRate;
-        if (!isOnLine) {
-            punishRate = [offLinePunishRate, RATE_DECIMAL];
-        } else if (byztineBehavior == ByztineBehavior.DuplicateVote) {
-            punishRate = [duplicateVotePunishRate, RATE_DECIMAL];
-        } else if (byztineBehavior == ByztineBehavior.LightClientAttack) {
-            punishRate = [lightClientAttackPunishRate, RATE_DECIMAL];
-        } else if (byztineBehavior == ByztineBehavior.Unknown) {
-            punishRate = [unknownPunishRate, RATE_DECIMAL];
-        }
-
-        return punishRate;
-    }
-
     // 给proposer所有的delegator发放奖励
     function rewardDelegator(
         address proposer,
@@ -383,7 +310,6 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
         // 所有delegator的总佣金
         uint256 totalCommission;
 
-        // 重新赋值新变量，解决栈太深
         for (uint256 i = 0; i < delegators.length; i++) {
             am = getDelegatorAmountOfValidator(validator, delegators[i]);
             // (d.reward * am)/d.amount(delegator所有的质押金额)
@@ -403,9 +329,6 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
             delegatorRealReward = delegatorReward - commission;
             // 增加delegator reward金额
             rewards[delegators[i]] += delegatorRealReward;
-
-            // 事件日志
-            emit Rewards(delegators[i], delegatorRealReward);
         }
         return totalCommission;
     }
@@ -434,7 +357,11 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
         return rate;
     }
 
-    function getDelegatorAmountOfValidator(address delegator, address validator) public view returns (uint256) {
+    function getDelegatorAmountOfValidator(address delegator, address validator)
+        public
+        view
+        returns (uint256)
+    {
         Staking sc = Staking(stakingAddress);
 
         uint256 unbound = sc.delegatorsUnboundAmount(delegator, validator);
@@ -443,11 +370,31 @@ contract Reward is Initializable, AccessControlEnumerable, IBase {
         return unbound + bound;
     }
 
-    function getDelegatorTotalAmount(address delegator) public view returns (uint256) {
+    function getDelegatorTotalAmount(address delegator)
+        public
+        view
+        returns (uint256)
+    {
         Staking sc = Staking(stakingAddress);
 
-        (uint256 amount) = sc.delegators(delegator);
+        uint256 amount = sc.delegators(delegator);
 
         return amount;
+    }
+
+    function getPunishRate(ByztineBehavior byztine)
+        public
+        view
+        returns (uint256)
+    {
+        if (byztine == ByztineBehavior.DuplicateVote) {
+            return duplicateVotePunishRate;
+        } else if (byztine == ByztineBehavior.LightClientAttack) {
+            return lightClientAttackPunishRate;
+        } else if (byztine == ByztineBehavior.Unknown) {
+            return unknownPunishRate;
+        } else {
+            return 0;
+        }
     }
 }
