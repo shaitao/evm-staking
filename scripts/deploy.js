@@ -6,29 +6,61 @@
 // global scope, and execute the script.
 const { ethers, upgrades } = require("hardhat");
 
-async function main() {
+async function redeploySystem(proxy) {
+    const System = await ethers.getContractFactory("System");
+    const system = await System.deployProxy(proxy);
+    await system.deployed();
+
+    const P = await ethers.getContractFactory("Proxy");
+    const proxy = await P.attach(proxy);
+    await proxy.adminSetSystemAddress(system.address);
+
+    console.log("System address:", system.address);
+
+    return system.address;
+}
+
+async function deployStaking(system) {
     const Staking = await ethers.getContractFactory("Staking");
 
-    const mc = await upgrades.deployProxy(Staking, ["0x72488baa718f52b76118c79168e55c209056a2e6"]);
+    const staking = await upgrades.deployProxy(Staking, [system]);
 
-    await mc.deployed();
+    await staking.deployed();
 
-    console.log("Staking address:", mc.address);
+    console.log("Staking address:", staking.address);
 
+    return staking.address;
+}
+
+async function deployPower(staking, limit) {
     const Power = await ethers.getContractFactory("Power");
 
-    const p = await Power.deploy(mc.address, 10);
+    const p = await Power.deploy(staking, limit);
 
     await p.deployed();
 
     console.log("Power address:", p.address);
+}
 
+async function deployReward(staking, system) {
     const Reward = await ethers.getContractFactory("Reward");
-    const reward = await upgrades.deployProxy(Reward, [mc.address, "0x72488baa718f52b76118c79168e55c209056a2e6"]);
+    const reward = await upgrades.deployProxy(Reward, [staking, system]);
 
     await reward.deployed();
 
     console.log("Reward address:", reward.address);
+}
+
+async function main() {
+    const proxy = "0x72488baa718f52b76118c79168e55c209056a2e6";
+
+    const system_addr = await redeploySystem(proxy);
+
+    const staking_addr = await deployStaking(system_addr);
+
+    await deployPower(staking_addr, 10);
+
+    await deployReward(staking_addr, system_addr);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

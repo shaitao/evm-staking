@@ -9,7 +9,7 @@ import "./interfaces/IReward.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract System is Ownable, IBase {
-    address private __self = address(this);
+    address public __self = address(this);
 
     // address of proxy contract
     address public proxy_contract;
