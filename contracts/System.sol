@@ -52,10 +52,10 @@ contract System is Ownable, IBase {
 
     function trigger(
         address proposer,
-        address[] memory unsigned,
-        uint256 circulationAmount,
-        address[] memory byztine,
-        ByztineBehavior[] memory behavior
+        address[] calldata signed,
+        address[] calldata unsigned,
+        address[] calldata byztine,
+        ByztineBehavior[] calldata behavior
     ) external {
         if (stakingAddress != address(0)) {
             // Return unDelegate assets
@@ -65,7 +65,7 @@ contract System is Ownable, IBase {
 
         if (rewardAddress != address(0)) {
             IReward reward = IReward(rewardAddress);
-            // reward.reward(proposer, signed, circulationAmount);
+            reward.reward(proposer, signed);
             reward.punish(unsigned, byztine, behavior);
         }
     }

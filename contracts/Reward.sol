@@ -124,7 +124,10 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
 
     // ------ Begin reward
 
-    function reward(address proposer, address[] calldata signed) public onlyRole(SYSTEM_ROLE) {
+    function reward(address proposer, address[] calldata signed)
+        public
+        onlyRole(SYSTEM_ROLE)
+    {
         Staking sc = Staking(stakingAddress);
 
         uint256 totalPower = sc.totalDelegationAmount();
@@ -136,21 +139,39 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
         uint256 delegatorsLength = sc.validatorOfDelegatorLength(proposer);
         uint256 commissionRate = getCommissionRate(proposer);
 
-        for (uint256 i = 0; i < delegatorsLength; i ++) {
+        for (uint256 i = 0; i < delegatorsLength; i++) {
             address delegator = sc.validatorOfDelegatorAt(proposer, i);
 
             if (delegator == staker) {
-                uint256 amount = getDelegateAmountWithReward(delegator, proposer);
+                uint256 amount = getDelegateAmountWithReward(
+                    delegator,
+                    proposer
+                );
                 uint256 returnRate = getProposerReturnRate(signed);
-                uint256 r = computeReward(amount, validatorDelegationAmount, totalPower, returnRate, blockCountPerYear);
+                uint256 r = computeReward(
+                    amount,
+                    validatorDelegationAmount,
+                    totalPower,
+                    returnRate,
+                    blockCountPerYear
+                );
 
                 rewards[delegator] += r;
             } else {
-                uint256 amount = getDelegateAmountWithReward(delegator, proposer);
+                uint256 amount = getDelegateAmountWithReward(
+                    delegator,
+                    proposer
+                );
                 uint256 returnRate = getDelegatorReturnRate();
-                uint256 r = computeReward(amount, validatorDelegationAmount, totalPower, returnRate, blockCountPerYear);
+                uint256 r = computeReward(
+                    amount,
+                    validatorDelegationAmount,
+                    totalPower,
+                    returnRate,
+                    blockCountPerYear
+                );
 
-                uint256 commission = r * commissionRate / sc.FRA_UNITS();
+                uint256 commission = (r * commissionRate) / sc.FRA_UNITS();
                 rewards[staker] += commission;
 
                 uint256 left = r - commission;
@@ -159,11 +180,15 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
         }
     }
 
-    function getDelegateAmountWithReward(address delegator, address validator) public view returns(uint256) {
+    function getDelegateAmountWithReward(address delegator, address validator)
+        public
+        view
+        returns (uint256)
+    {
         uint256 amount = getDelegatorAmountOfValidator(delegator, validator);
         uint256 delegatorsAmount = getDelegatorTotalAmount(delegator);
 
-        return amount + rewards[delegator] * amount / delegatorsAmount;
+        return amount + (rewards[delegator] * amount) / delegatorsAmount;
     }
 
     function computeReward(
@@ -175,22 +200,39 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
     ) public pure returns (uint256) {
         // (am / total_amount) * (global_amount * ((return_rate[0] / return_rate[1]) / ((365 * 24 * 3600) / block_itv)))
         uint256 a0 = delegateAmount * totalDelegationAmount * returnRate;
-        uint256 a1 = validatorDelegationAmount * RATE_DECIMAL * blockCountPerYear;
+        uint256 a1 = validatorDelegationAmount *
+            RATE_DECIMAL *
+            blockCountPerYear;
 
         return a0 / a1;
     }
 
-    function getProposerReturnRate(address[] calldata signed) public view returns (uint256 rate) {
+    function getProposerReturnRate(address[] calldata signed)
+        public
+        view
+        returns (uint256 rate)
+    {
         (uint256 signedPower, uint256 totalPower) = lastVotePercent(signed);
 
         //                        0, 1,      2,      3,      4,      5,       6
-        uint24[7] memory rule = [0, 666667, 750000, 833333, 916667, 1000000, 1000001];
+        uint24[7] memory rule = [
+            0,
+            666667,
+            750000,
+            833333,
+            916667,
+            1000000,
+            1000001
+        ];
 
-        for (uint256 i = 0; i <= 5; i ++) {
+        for (uint256 i = 0; i <= 5; i++) {
             uint256 low = rule[i];
             uint256 high = rule[i + 1];
 
-            if(signedPower * 1000000 < totalPower * high && signedPower * 1000000 >= totalPower * low ) {
+            if (
+                signedPower * 1000000 < totalPower * high &&
+                signedPower * 1000000 >= totalPower * low
+            ) {
                 return i * (RATE_DECIMAL / 100);
             }
         }
@@ -210,9 +252,9 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
         uint256 rate = 0;
 
         if (a0 * 100 > a1 * 268) {
-            rate = 268 * RATE_DECIMAL / 100;
+            rate = (268 * RATE_DECIMAL) / 100;
         } else if (a0 * 1000 < a1 * 54) {
-            rate = 54 * RATE_DECIMAL / 1000;
+            rate = (54 * RATE_DECIMAL) / 1000;
         }
 
         return rate;
@@ -332,7 +374,11 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
         return staker;
     }
 
-    function getCommissionRate(address validator) public view returns (uint256) {
+    function getCommissionRate(address validator)
+        public
+        view
+        returns (uint256)
+    {
         Staking sc = Staking(stakingAddress);
 
         (, , , uint256 rate, , , ) = sc.validators(validator);
