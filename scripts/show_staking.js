@@ -9,7 +9,7 @@ const { ethers, upgrades } = require("hardhat");
 async function main() {
     const S = await ethers.getContractFactory("Staking");
 
-    const s = await S.attach("0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0");
+    const s = await S.attach("0xad5d2989c59c6FC5550174a6D73E826f6A3F5bb4");
 
     let r0 = await s.totalDelegationAmount();
 

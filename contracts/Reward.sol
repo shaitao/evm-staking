@@ -3,12 +3,12 @@ pragma solidity ^0.8.9;
 
 import "./Staking.sol";
 import "./interfaces/IReward.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract Reward is Initializable, AccessControlEnumerable, IReward {
-    using EnumerableSet for EnumerableSet.AddressSet;
+contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
+    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     bytes32 public constant SYSTEM_ROLE = keccak256("SYSTEM");
     uint256 public constant RATE_DECIMAL = 10**8;
@@ -27,6 +27,10 @@ contract Reward is Initializable, AccessControlEnumerable, IReward {
 
     // Claim data
     ClaimOps[] public claimOps;
+
+    uint256 public coinbaseAmount;
+
+    uint256 public globalPreIssueAmount;
 
     event Punish(
         address punishAddress,
@@ -79,6 +83,13 @@ contract Reward is Initializable, AccessControlEnumerable, IReward {
         unknownPunishRate = unknownPunishRate_;
     }
 
+    function adminSetglobalPreIssueAmount(uint256 amount)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        globalPreIssueAmount = amount;
+    }
+
     // Claim assets
     function claim(uint256 amount) external {
         address delegator = msg.sender;
@@ -100,8 +111,8 @@ contract Reward is Initializable, AccessControlEnumerable, IReward {
     // Get the data currently claiming
     function getClaimOps()
         external
-        onlyRole(SYSTEM_ROLE)
         override
+        onlyRole(SYSTEM_ROLE)
         returns (ClaimOps[] memory)
     {
         ClaimOps[] memory ops = claimOps;
@@ -111,66 +122,119 @@ contract Reward is Initializable, AccessControlEnumerable, IReward {
         return ops;
     }
 
-    //     // Distribute rewards
-    // function reward(
-    //     address validator,
-    //     address[] memory signed,
-    //     uint256 circulationAmount
-    // ) public onlyRole(SYSTEM_ROLE) {
-    //     uint256[2] memory returnRateProposer;
-    //     returnRateProposer = lastVotePercent(signed);
-    //
-    //     Staking sc = Staking(stakingAddress);
-    //     uint256 totalDelegationAmount = sc.totalDelegationAmount();
-    //
-    //     // APY：delegator return_rate
-    //     uint256[2] memory delegatorReturnRate;
-    //     delegatorReturnRate = getBlockReturnRate(
-    //         totalDelegationAmount,
-    //         circulationAmount
-    //     );
-    //
-    //     // 质押金额global_amount：所有用户质押金额
-    //     // 质押金额total_amount（当前validator相关）：validator质押金额 + 其旗下delegator质押金额
-    //     // 质押金额am：当前delegator的质押金额
-    //     // return_rate 分为两种，分别在上面已经计算
-    //     // 计算公式：(am / total_amount) * (global_amount * ((return_rate[0] / return_rate[1]) / ((365 * 24 * 3600) / block_itv)))
-    //
-    //     // 当前validator及旗下所有delegator质押金额
-    //     uint256 validatorDelegationAmount = getPower(validator);
-    //     // 出块周期
-    //     uint256 blocktime = scpunishInfoRes.blocktime();
-    //
-    //     // 给proposer所有的delegator发放奖励,并返回所有delegator的总佣金
-    //     uint256 totalCommission;
-    //     totalCommission = rewardDelegator(
-    //         validator,
-    //         delegators,
-    //         total_amount,
-    //         global_amount,
-    //         delegatorReturnRate,
-    //         blockInterval
-    //     );
-    //
-    //     // 给proposer发放奖
-    //
-    //     uint256 am = sc.getStakerDelegateAmount(validatorCopy);
-    //     // 当前validator的staker地址
-    //     address stakerAddress = sc.getStakerByValidator(validatorCopy);
-    //     am +=
-    //         (rewords[validatorCopy] * am) /
-    //         sc.getDelegateTotalAmount(stakerAddress);
-    //
-    //     uint256 proposerRewards = (am / total_amount) *
-    //         (global_amount *
-    //             ((returnRateProposer[0] / returnRateProposer[1]) /
-    //                 ((365 * 24 * 3600) / blockInterval)));
-    //
-    //     // proposer奖励 = 公式计算结果+旗下所有delegator的佣金
-    //     rewords[validatorCopy] += proposerRewards + totalCommission;
-    //
-    //     emit Rewards(validatorCopy, proposerRewards);
-    // }
+    // ------ Begin reward
+
+    function reward(address proposer, address[] calldata signed) public onlyRole(SYSTEM_ROLE) {
+        Staking sc = Staking(stakingAddress);
+
+        uint256 totalPower = sc.totalDelegationAmount();
+        uint256 validatorDelegationAmount = getPower(proposer);
+        uint256 blockCountPerYear = (365 * 24 * 3600) / sc.blocktime();
+
+        address staker = getStaker(proposer);
+
+        uint256 delegatorsLength = sc.validatorOfDelegatorLength(proposer);
+        uint256 commissionRate = getCommissionRate(proposer);
+
+        for (uint256 i = 0; i < delegatorsLength; i ++) {
+            address delegator = sc.validatorOfDelegatorAt(proposer, i);
+
+            if (delegator == staker) {
+                uint256 amount = getDelegateAmountWithReward(delegator, proposer);
+                uint256 returnRate = getProposerReturnRate(signed);
+                uint256 r = computeReward(amount, validatorDelegationAmount, totalPower, returnRate, blockCountPerYear);
+
+                rewards[delegator] += r;
+            } else {
+                uint256 amount = getDelegateAmountWithReward(delegator, proposer);
+                uint256 returnRate = getDelegatorReturnRate();
+                uint256 r = computeReward(amount, validatorDelegationAmount, totalPower, returnRate, blockCountPerYear);
+
+                uint256 commission = r * commissionRate / sc.FRA_UNITS();
+                rewards[staker] += commission;
+
+                uint256 left = r - commission;
+                rewards[delegator] += left;
+            }
+        }
+    }
+
+    function getDelegateAmountWithReward(address delegator, address validator) public view returns(uint256) {
+        uint256 amount = getDelegatorAmountOfValidator(delegator, validator);
+        uint256 delegatorsAmount = getDelegatorTotalAmount(delegator);
+
+        return amount + rewards[delegator] * amount / delegatorsAmount;
+    }
+
+    function computeReward(
+        uint256 delegateAmount,
+        uint256 validatorDelegationAmount,
+        uint256 totalDelegationAmount,
+        uint256 returnRate,
+        uint256 blockCountPerYear
+    ) public pure returns (uint256) {
+        // (am / total_amount) * (global_amount * ((return_rate[0] / return_rate[1]) / ((365 * 24 * 3600) / block_itv)))
+        uint256 a0 = delegateAmount * totalDelegationAmount * returnRate;
+        uint256 a1 = validatorDelegationAmount * RATE_DECIMAL * blockCountPerYear;
+
+        return a0 / a1;
+    }
+
+    function getProposerReturnRate(address[] calldata signed) public view returns (uint256 rate) {
+        (uint256 signedPower, uint256 totalPower) = lastVotePercent(signed);
+
+        //                        0, 1,      2,      3,      4,      5,       6
+        uint24[7] memory rule = [0, 666667, 750000, 833333, 916667, 1000000, 1000001];
+
+        for (uint256 i = 0; i <= 5; i ++) {
+            uint256 low = rule[i];
+            uint256 high = rule[i + 1];
+
+            if(signedPower * 1000000 < totalPower * high && signedPower * 1000000 >= totalPower * low ) {
+                return i * (RATE_DECIMAL / 100);
+            }
+        }
+
+        // Revert
+    }
+
+    function getDelegatorReturnRate() public view returns (uint256) {
+        Staking sc = Staking(stakingAddress);
+
+        uint256 totalPower = sc.totalDelegationAmount();
+        uint256 unlockAmount = globalPreIssueAmount - coinbaseAmount;
+
+        uint256 a0 = totalPower * 536;
+        uint256 a1 = unlockAmount * 10000;
+
+        uint256 rate = 0;
+
+        if (a0 * 100 > a1 * 268) {
+            rate = 268 * RATE_DECIMAL / 100;
+        } else if (a0 * 1000 < a1 * 54) {
+            rate = 54 * RATE_DECIMAL / 1000;
+        }
+
+        return rate;
+    }
+
+    function lastVotePercent(address[] calldata signed)
+        public
+        view
+        returns (uint256, uint256)
+    {
+        Staking sc = Staking(stakingAddress);
+        uint256 totalPower = sc.totalDelegationAmount();
+        uint256 signedPower;
+        for (uint256 i = 0; i < signed.length; i++) {
+            if (getStaker(signed[i]) != address(0)) {
+                signedPower += getPower(signed[i]);
+            }
+        }
+        return (signedPower, totalPower);
+    }
+
+    // ------- End reward
 
     // Punish validator and delegators
     function punish(
@@ -250,88 +314,7 @@ contract Reward is Initializable, AccessControlEnumerable, IReward {
         sc.powerDesc(validator, delegator, punishAmount);
     }
 
-    // Get last vote percent
-    function lastVotePercent(address[] memory signed)
-        public
-        view
-        returns (uint256[2] memory)
-    {
-        Staking sc = Staking(stakingAddress);
-        uint256 totalPower = sc.totalDelegationAmount();
-        uint256 signedPower;
-        for (uint256 i = 0; i < signed.length; i++) {
-            if (isValidator(signed[i])) {
-                signedPower += getPower(signed[i]);
-            }
-        }
-        uint256[2] memory votePercent = [signedPower, totalPower];
-        return votePercent;
-    }
-
-    // Get block rewards-rate,计算APY,传入 全局质押比
-    function getBlockReturnRate(
-        uint256 delegationPercent0,
-        uint256 delegationPercent1
-    ) public pure returns (uint256[2] memory) {
-        uint256 a0 = delegationPercent0 * 536;
-        uint256 a1 = delegationPercent1 * 10000;
-        if (a0 * 100 > a1 * 268) {
-            a0 = 268;
-            a1 = 100;
-        } else if (a0 * 1000 < a1 * 54) {
-            a0 = 54;
-            a1 = 1000;
-        }
-        uint256[2] memory rewardsRate = [a0, a1];
-        return rewardsRate;
-    }
-
-    // 给proposer所有的delegator发放奖励
-    function rewardDelegator(
-        address proposer,
-        address[] calldata delegators,
-        uint256 total_amount,
-        uint256 global_amount,
-        uint256[2] calldata returnRate,
-        uint256 blockInterval
-    ) internal returns (uint256) {
-        // 佣金比例
-        uint256 commissionRate = getRate(proposer);
-        //
-        uint256 am;
-        // 佣金
-        uint256 commission;
-        // 按照质押比例给某个delegator发放的奖励金额
-        uint256 delegatorReward;
-        // 按照质押比例给某个delegator，减去佣金后实际发放的奖励金额
-        uint256 delegatorRealReward;
-        // 为了解决栈太深，重新赋值新变量
-        address validator = proposer;
-        // 所有delegator的总佣金
-        uint256 totalCommission;
-
-        for (uint256 i = 0; i < delegators.length; i++) {
-            am = getDelegatorAmountOfValidator(validator, delegators[i]);
-            // (d.reward * am)/d.amount(delegator所有的质押金额)
-            am +=
-                (rewards[delegators[i]] * am) /
-                getDelegatorTotalAmount(delegators[i]);
-            // 带佣金的奖励
-            delegatorReward =
-                (am / total_amount) *
-                (global_amount *
-                    ((returnRate[0] / returnRate[1]) /
-                        ((365 * 24 * 3600) / blockInterval)));
-            // 佣金，佣金给到这个validator的self-delegator的delegation之中
-            commission = delegatorReward * commissionRate;
-            totalCommission += commission;
-            // 实际分配给delegator的奖励， 奖励需要按佣金比例扣除佣金,最后剩下的才是奖励
-            delegatorRealReward = delegatorReward - commission;
-            // 增加delegator reward金额
-            rewards[delegators[i]] += delegatorRealReward;
-        }
-        return totalCommission;
-    }
+    // ..... utils
 
     function getPower(address validator) public view returns (uint256) {
         Staking sc = Staking(stakingAddress);
@@ -341,15 +324,15 @@ contract Reward is Initializable, AccessControlEnumerable, IReward {
         return power;
     }
 
-    function isValidator(address validator) public view returns (bool) {
+    function getStaker(address validator) public view returns (address) {
         Staking sc = Staking(stakingAddress);
 
         (, , , , address staker, , ) = sc.validators(validator);
 
-        return staker == address(0);
+        return staker;
     }
 
-    function getRate(address validator) public view returns (uint256) {
+    function getCommissionRate(address validator) public view returns (uint256) {
         Staking sc = Staking(stakingAddress);
 
         (, , , uint256 rate, , , ) = sc.validators(validator);
@@ -396,5 +379,23 @@ contract Reward is Initializable, AccessControlEnumerable, IReward {
         } else {
             return 0;
         }
+    }
+
+    function getDelegators(address validator)
+        public
+        view
+        returns (address[] memory delegators)
+    {
+        Staking sc = Staking(stakingAddress);
+
+        uint256 length = sc.validatorOfDelegatorLength(validator);
+
+        address[] memory result = new address[](length);
+
+        for (uint256 i = 0; i <= length; i++) {
+            result[i] = sc.validatorOfDelegatorAt(validator, i);
+        }
+
+        return result;
     }
 }
