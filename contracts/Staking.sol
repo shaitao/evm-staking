@@ -313,31 +313,31 @@ contract Staking is
 
     /// --- Record for delegate and undelegate
 
-    enum RecordType {
-        Unknown,
-        Delegate,
-        Undelegate
-    }
+    // enum RecordType {
+    //     Unknown,
+    //     Delegate,
+    //     Undelegate
+    // }
 
-    struct Record {
-        uint256 height;
-        address validator;
-        address delegator;
-        uint256 amount;
-        RecordType ty;
-    }
+    // struct Record {
+    //     uint256 height;
+    //     address validator;
+    //     address delegator;
+    //     uint256 amount;
+    //     RecordType ty;
+    // }
 
-    mapping(address => bytes32[]) public delegatorRecordIndex;
+    // mapping(address => bytes32[]) public delegatorRecordIndex;
 
-    function delegatorRecordIndexLength(address delegator)
-        public
-        view
-        returns (uint256)
-    {
-        return delegatorRecordIndex[delegator].length;
-    }
+    // function delegatorRecordIndexLength(address delegator)
+    //     public
+    //     view
+    //     returns (uint256)
+    // {
+    //     return delegatorRecordIndex[delegator].length;
+    // }
 
-    mapping(bytes32 => Record) public records;
+    // mapping(bytes32 => Record) public records;
 
     /// --- End record for delegate and undelegate
 
@@ -393,19 +393,19 @@ contract Staking is
 
         _addDelegator(msg.sender, validator, amount);
 
-        /// record delegate
-        bytes32 idx = keccak256(
-            abi.encode(block.number, validator, msg.sender, amount, uint256(1))
-        );
+        // /// record delegate
+        // bytes32 idx = keccak256(
+        //     abi.encode(block.number, validator, msg.sender, amount, uint256(1))
+        // );
 
-        Record storage r = records[idx];
-        r.height = block.number;
-        r.validator = validator;
-        r.delegator = msg.sender;
-        r.amount = amount;
-        r.ty = RecordType.Delegate;
+        // Record storage r = records[idx];
+        // r.height = block.number;
+        // r.validator = validator;
+        // r.delegator = msg.sender;
+        // r.amount = amount;
+        // r.ty = RecordType.Delegate;
 
-        delegatorRecordIndex[msg.sender].push(idx);
+        // delegatorRecordIndex[msg.sender].push(idx);
 
         emit Stake(public_key, msg.sender, msg.value, memo, rate);
     }
@@ -427,19 +427,19 @@ contract Staking is
 
         _addDelegator(msg.sender, validator, amount);
 
-        /// record delegate
-        bytes32 idx = keccak256(
-            abi.encode(block.number, validator, msg.sender, amount, uint256(1))
-        );
+        // /// record delegate
+        // bytes32 idx = keccak256(
+        //     abi.encode(block.number, validator, msg.sender, amount, uint256(1))
+        // );
 
-        Record storage r = records[idx];
-        r.height = block.number;
-        r.validator = validator;
-        r.delegator = msg.sender;
-        r.amount = amount;
-        r.ty = RecordType.Delegate;
+        // Record storage r = records[idx];
+        // r.height = block.number;
+        // r.validator = validator;
+        // r.delegator = msg.sender;
+        // r.amount = amount;
+        // r.ty = RecordType.Delegate;
 
-        delegatorRecordIndex[msg.sender].push(idx);
+        // delegatorRecordIndex[msg.sender].push(idx);
 
         emit Delegation(validator, msg.sender, amount);
     }
@@ -471,19 +471,19 @@ contract Staking is
         );
         allUndelegations.add(idx);
 
-        /// record delegate
-        bytes32 idxx = keccak256(
-            abi.encode(block.number, validator, msg.sender, amount, uint256(2))
-        );
+        // /// record delegate
+        // bytes32 idxx = keccak256(
+        //     abi.encode(block.number, validator, msg.sender, amount, uint256(2))
+        // );
 
-        Record storage r = records[idxx];
-        r.height = block.number;
-        r.validator = validator;
-        r.delegator = msg.sender;
-        r.amount = amount;
-        r.ty = RecordType.Undelegate;
+        // Record storage r = records[idxx];
+        // r.height = block.number;
+        // r.validator = validator;
+        // r.delegator = msg.sender;
+        // r.amount = amount;
+        // r.ty = RecordType.Undelegate;
 
-        delegatorRecordIndex[msg.sender].push(idxx);
+        // delegatorRecordIndex[msg.sender].push(idxx);
 
         emit Undelegation(validator, msg.sender, amount);
     }
@@ -593,6 +593,35 @@ contract Staking is
         v.power -= realAmount;
 
         totalDelegationAmount -= realAmount;
+    }
+
+    function systemSetDelegation(
+        address validator,
+        address delegator,
+        uint256 amount
+    ) public onlyRole(SYSTEM_ROLE) {
+        _addDelegator(delegator, validator, amount)
+    }
+
+    function systemSetDelegationUnbound(
+        address validator,
+        address payable delegator,
+        uint256 amount,
+        uint256 target_height
+    ) public onlyRole(SYSTEM_ROLE) {
+        _delDelegator(delegator, validator, amount);
+
+        bytes32 idx = keccak256(
+            abi.encode(validator, amount, delegator, target_height)
+        );
+
+        undelegations[idx] = UndelegationInfo(
+            validator,
+            payable(delegator),
+            amount,
+            target_height
+        );
+        allUndelegations.add(idx);
     }
 
     // -------- utils function
