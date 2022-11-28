@@ -81,10 +81,11 @@ contract System is Ownable, IBase {
     function getValidatorsList()
         external
         view
-        returns (ValidatorInfo[] memory)
+        returns (ValidatorInfo[] memory list)
     {
-        IPower power = IPower(powerAddress);
-
-        return power.getValidatorsList();
+        if (powerAddress != address(0)) {
+            IPower power = IPower(powerAddress);
+            return power.getValidatorsList();
+        }
     }
 }
