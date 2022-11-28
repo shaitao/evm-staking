@@ -343,6 +343,7 @@ contract Staking is
 
     event Stake(
         bytes public_key,
+        PublicKeyType ty,
         address staker,
         uint256 amount,
         string memo,
@@ -382,12 +383,15 @@ contract Staking is
 
         require(amount <= maxDelegateAmount, "amount too large");
 
+        PublicKeyType ty = PublicKeyType.Ed25519;
+
         Validator storage v = validators[validator];
         v.public_key = public_key;
         v.memo = memo;
         v.rate = rate;
         v.staker = msg.sender;
         v.beginBlock = block.number;
+        v.ty = ty;
 
         allValidators.add(validator);
 
@@ -407,7 +411,7 @@ contract Staking is
 
         // delegatorRecordIndex[msg.sender].push(idx);
 
-        emit Stake(public_key, msg.sender, msg.value, memo, rate);
+        emit Stake(public_key, ty, msg.sender, msg.value, memo, rate);
     }
 
     // Delegate assets
@@ -531,7 +535,7 @@ contract Staking is
         address staker,
         string calldata memo,
         uint256 rate
-    ) external payable onlyRole(SYSTEM_ROLE) {
+    ) external payable onlyRole(DEFAULT_ADMIN_ROLE) {
         // Check whether the validator was staked
         require(validators[validator].staker == address(0), "already staked");
 
@@ -539,24 +543,27 @@ contract Staking is
 
         require(amount * (10**12) == msg.value, "lower 12 must be 0.");
 
+        PublicKeyType ty = PublicKeyType.Ed25519;
+
         Validator storage v = validators[validator];
         v.public_key = public_key;
         v.memo = memo;
         v.rate = rate;
         v.staker = staker;
+        v.ty = ty;
 
         allValidators.add(validator);
 
         _addDelegator(staker, validator, amount);
 
-        emit Stake(public_key, staker, msg.value, memo, rate);
+        emit Stake(public_key, ty, staker, msg.value, memo, rate);
     }
 
     // Delegate assets
     function adminDelegate(address validator, address delegator)
         external
         payable
-        onlyRole(SYSTEM_ROLE)
+        onlyRole(DEFAULT_ADMIN_ROLE)
     {
         Validator storage v = validators[validator];
         require(v.staker != address(0), "invalid validator");

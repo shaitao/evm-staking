@@ -9,19 +9,26 @@ import "./Staking.sol";
 contract Power is Ownable, IBase, IPower {
     address public stakingAddress;
 
-    uint256 public limit;
+    uint256 public maxLimit;
 
-    constructor(address stakingAddress_, uint256 limit_) {
+    uint256 public minLimit;
+
+    constructor(address stakingAddress_, uint256 min, uint256 max) {
         stakingAddress = stakingAddress_;
-        limit = limit_;
+        maxLimit = max;
+        minLimit = min;
     }
 
     function adminSetStakingAddress(address stakingAddress_) public onlyOwner {
         stakingAddress = stakingAddress_;
     }
 
-    function adminSetLimit(uint256 limit_) public onlyOwner {
-        limit = limit_;
+    function adminSetMaxLimit(uint256 limit) public onlyOwner {
+        maxLimit = limit;
+    }
+
+    function adminSetMinLimit(uint256 limit) public onlyOwner {
+        minLimit = limit;
     }
 
     function getValidatorsList()
@@ -34,12 +41,16 @@ contract Power is Ownable, IBase, IPower {
 
         uint256 len = staking.allValidatorsLength();
 
+        if (len < minLimit) {
+            return new ValidatorInfo[](0);
+        }
+
         uint256 length = len;
 
-        if (len < limit) {
+        if (len < maxLimit) {
             length = len;
         } else {
-            length = limit;
+            length = maxLimit;
         }
 
         ValidatorInfo[] memory vi = new ValidatorInfo[](length);
@@ -60,7 +71,7 @@ contract Power is Ownable, IBase, IPower {
 
             ) = staking.validators(validator);
 
-            if (i < limit) {
+            if (i < maxLimit) {
                 vi[i].public_key = public_key;
                 vi[i].ty = ty;
                 vi[i].addr = validator;
@@ -78,7 +89,7 @@ contract Power is Ownable, IBase, IPower {
                     vi[minIndex].power = power;
 
                     // Find min value
-                    for (uint256 j = 0; j < limit; j++) {
+                    for (uint256 j = 0; j < maxLimit; j++) {
                         if (power < minValue) {
                             minValue = power;
                             minIndex = j;

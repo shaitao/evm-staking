@@ -7,13 +7,13 @@
 const { ethers, upgrades } = require("hardhat");
 const utils = require("./address_utils");
 
-async function redeploySystem(proxy) {
+async function redeploySystem(proxy_addr) {
     const System = await ethers.getContractFactory("System");
-    const system = await System.deployProxy(proxy);
+    const system = await System.deploy(proxy_addr);
     await system.deployed();
 
-    const P = await ethers.getContractFactory("Proxy");
-    const proxy = await P.attach(proxy);
+    const P = await ethers.getContractFactory("SystemProxy");
+    const proxy = await P.attach(proxy_addr);
     await proxy.adminSetSystemAddress(system.address);
 
     console.log("System address:", system.address);
@@ -33,14 +33,16 @@ async function deployStaking(system) {
     return staking.address;
 }
 
-async function deployPower(staking, limit) {
+async function deployPower(staking, min, max) {
     const Power = await ethers.getContractFactory("Power");
 
-    const p = await Power.deploy(staking, limit);
+    const p = await Power.deploy(staking, min, max);
 
     await p.deployed();
 
     console.log("Power address:", p.address);
+
+    return p.address;
 }
 
 async function deployReward(staking, system) {
@@ -50,18 +52,29 @@ async function deployReward(staking, system) {
     await reward.deployed();
 
     console.log("Reward address:", reward.address);
+
+    return reward.address;
 }
 
 async function main() {
-    const proxy = "0x72488baa718f52b76118c79168e55c209056a2e6";
+    const proxy = await utils.get_proxy_address();
+
+    console.log("Proxy address:", proxy);
 
     const system_addr = await redeploySystem(proxy);
 
+    const System = await ethers.getContractFactory("System");
+
+    const system = await System.attach(system_addr);
+
     const staking_addr = await deployStaking(system_addr);
+    await system.adminSetStakingAddress(staking_addr);
 
-    await deployPower(staking_addr, 10);
+    const power_addr = await deployPower(staking_addr, 5, 40);
+    await system.adminSetPowerAddress(power_addr);
 
-    await deployReward(staking_addr, system_addr);
+    const reward_addr = await deployReward(staking_addr, system_addr);
+    await system.adminSetRewardAddress(reward_addr);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

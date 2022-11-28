@@ -4,53 +4,37 @@
 // You can also run a script with `npx hardhat run <script>`. If you do that, Hardhat
 // will compile your contracts, add the Hardhat Runtime Environment's members to the
 // global scope, and execute the script.
-const { ethers, upgrades } = require("hardhat");
+const { ethers } = require("hardhat");
+const axios = require("axios");
+const utils = require("./address_utils");
 
 async function main() {
     let memo1 = {"desc":"a","logo":"https://i.imgur.com/JfxwM7J.png","name":"Koncrete Validator","website":"Koncrete.org"};
 
-    const sa = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+    const sa = "0x72488bAa718F52B76118C79168E55c209056A2E6";
 
-    const validatos = [
-        {
-            validator: "0x000E33AB7471186F3B1DE9FC08BB9C480F453590",
-            public_key: "0x1fac26b9312e978eac0afc035170ad611c6d5bac62540c306bda5eceb3f6a3cd",
-            staker: sa,
-            memo: JSON.stringify(memo1),
-            rate: 20000,
-        },
-        {
-            validator: "0856654F7CD4BB0D6CC4409EF4892136C9D24692",
-            public_key: "0x1fac26b9312e978eac0afc035170ad611c6d5bac62540c306bda5eceb3f6a3cd",
-            staker: sa,
-            memo: JSON.stringify(memo1),
-            rate: 20000,
-        },
-        {
-            validator: "5C97EE9B91D90B332813078957E3A96B304791B4",
-            public_key: "0x1fac26b9312e978eac0afc035170ad611c6d5bac62540c306bda5eceb3f6a3cd",
-            staker: sa,
-            memo: JSON.stringify(memo1),
-            rate: 20000,
-        },
-        {
-            validator: "FD8C65634A9D8899FA14200177AF19D24F6E1C37",
-            public_key: "0x1fac26b9312e978eac0afc035170ad611c6d5bac62540c306bda5eceb3f6a3cd",
-            staker: sa,
-            memo: JSON.stringify(memo1),
-            rate: 20000,
-        },
-    ];
+    let validatos = await axios.get("http://localhost:26657/validators");
 
-    const Power = await ethers.getContractFactory("Staking");
+    let vs = validatos.data.result.validators;
 
-    const power = await Power.attach("0xad5d2989c59c6FC5550174a6D73E826f6A3F5bb4");
+    const Staking = await ethers.getContractFactory("Staking");
 
-    for (let v of validatos) {
-        await power.adminStake(v.validator, v.public_key, v.staker, v.memo, v.rate, {
-            value: ethers.utils.parseEther("10"),
+    const addrs = await utils.get_address();
+
+    const staking = await Staking.attach(addrs.staking);
+
+    for (let v of vs) {
+        let address = '0x' + v.address;
+        let public_key = '0x' + Buffer.from(v.pub_key.value, 'base64').toString('hex');
+
+        console.log("stake to:", address)
+        console.log("public key is:", public_key);
+
+        await staking.adminStake(address, public_key, sa, JSON.stringify(memo1), 20000, {
+            value: ethers.utils.parseEther("130000"),
         });
-        console.log("stake: ", v.validator);
+
+        console.log();
     }
 }
 

@@ -4,21 +4,13 @@
 // You can also run a script with `npx hardhat run <script>`. If you do that, Hardhat
 // will compile your contracts, add the Hardhat Runtime Environment's members to the
 // global scope, and execute the script.
-const { ethers, upgrades } = require("hardhat");
+
+const utils = require("./address_utils");
 
 async function main() {
-    const S = await ethers.getContractFactory("Staking");
+    let addrs = await utils.get_address();
 
-    const s = await S.attach("0xad5d2989c59c6FC5550174a6D73E826f6A3F5bb4");
-
-    let r0 = await s.totalDelegationAmount();
-
-    console.log("total:", r0);
-
-
-    let r1 = await s.delegatorsBoundAmount("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", "0856654F7CD4BB0D6CC4409EF4892136C9D24692");
-    console.log("unbound:", r1);
-
+    console.log(addrs);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
