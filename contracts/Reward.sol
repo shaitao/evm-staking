@@ -356,7 +356,10 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
         sc.powerDesc(validator, delegator, punishAmount);
     }
 
-    function systemSetRewards(address delegator, uint256 amount) public onlyRole(SYSTEM_ROLE) {
+    function systemSetRewards(address delegator, uint256 amount)
+        public
+        onlyRole(SYSTEM_ROLE)
+    {
         rewards[delegator] = amount;
     }
 

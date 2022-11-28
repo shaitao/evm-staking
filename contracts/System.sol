@@ -12,7 +12,7 @@ contract System is Ownable, IBase {
     address public __self = address(this);
 
     // address of proxy contract
-    address public proxy_contract;
+    address public proxyAddress;
 
     // Staking contract address
     address public stakingAddress;
@@ -27,27 +27,36 @@ contract System is Ownable, IBase {
      * @param _proxy_contract address of proxy contract.
      */
     constructor(address _proxy_contract) {
-        proxy_contract = _proxy_contract;
+        proxyAddress = _proxy_contract;
     }
 
     modifier onlyProxy() {
         require(
-            msg.sender == proxy_contract,
+            msg.sender == proxyAddress,
             "Only proxy can call this function"
         );
         _;
     }
 
-    function adminSetStakingAddress(address stakingAddress_) public onlyOwner {
-        stakingAddress = stakingAddress_;
+    modifier onlySystem() {
+        require(msg.sender == address(0), "Only system can call this function");
+        _;
     }
 
-    function adminSetRewardAddress(address rewardAddress_) public onlyOwner {
-        rewardAddress = rewardAddress_;
+    function adminSetProxyAddress(address addr) public onlyOwner {
+        proxyAddress = addr;
     }
 
-    function adminSetPowerAddress(address powerAddress_) public onlyOwner {
-        powerAddress = powerAddress_;
+    function adminSetStakingAddress(address addr) public onlyOwner {
+        stakingAddress = addr;
+    }
+
+    function adminSetRewardAddress(address addr) public onlyOwner {
+        rewardAddress = addr;
+    }
+
+    function adminSetPowerAddress(address addr) public onlyOwner {
+        powerAddress = addr;
     }
 
     function trigger(
@@ -56,7 +65,19 @@ contract System is Ownable, IBase {
         address[] calldata unsigned,
         address[] calldata byztine,
         ByztineBehavior[] calldata behavior
-    ) external {
+    ) external onlySystem {
+        System system = System(__self);
+
+        system._trigger(proposer, signed, unsigned, byztine, behavior);
+    }
+
+    function _trigger(
+        address proposer,
+        address[] calldata signed,
+        address[] calldata unsigned,
+        address[] calldata byztine,
+        ByztineBehavior[] calldata behavior
+    ) external onlyProxy {
         if (stakingAddress != address(0)) {
             // Return unDelegate assets
             IStaking staking = IStaking(stakingAddress);
@@ -70,22 +91,37 @@ contract System is Ownable, IBase {
         }
     }
 
-    // Get data currently claiming
-    function getClaimOps() external returns (ClaimOps[] memory ops) {
+    function getClaimOps() external onlySystem returns (ClaimOps[] memory) {
+        System system = System(__self);
+
+        return system._getClaimOps();
+    }
+
+    function _getClaimOps() external onlyProxy returns (ClaimOps[] memory) {
         if (rewardAddress != address(0)) {
             IReward reward = IReward(rewardAddress);
             return reward.getClaimOps();
+        } else {
+            ClaimOps[] memory ops = new ClaimOps[](0);
+
+            return ops;
         }
     }
 
-    function getValidatorsList()
-        external
-        view
-        returns (ValidatorInfo[] memory list)
-    {
+    function getValidatorsList() public view returns (ValidatorInfo[] memory) {
+        System system = System(__self);
+
+        return system._getValidatorsList();
+    }
+
+    function _getValidatorsList() public view returns (ValidatorInfo[] memory) {
         if (powerAddress != address(0)) {
             IPower power = IPower(powerAddress);
             return power.getValidatorsList();
+        } else {
+            ValidatorInfo[] memory ops = new ValidatorInfo[](0);
+
+            return ops;
         }
     }
 }

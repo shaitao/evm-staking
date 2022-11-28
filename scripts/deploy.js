@@ -5,6 +5,7 @@
 // will compile your contracts, add the Hardhat Runtime Environment's members to the
 // global scope, and execute the script.
 const { ethers, upgrades } = require("hardhat");
+const utils = require("./address_utils");
 
 async function redeploySystem(proxy) {
     const System = await ethers.getContractFactory("System");
