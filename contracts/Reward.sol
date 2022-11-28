@@ -83,11 +83,15 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
         unknownPunishRate = unknownPunishRate_;
     }
 
-    function adminSetglobalPreIssueAmount(uint256 amount)
+    function systemSetGlobalPreIssueAmount(uint256 amount)
         public
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyRole(SYSTEM_ROLE)
     {
         globalPreIssueAmount = amount;
+    }
+
+    function systemSetCoinbaseAmount(uint256 amount) public onlyRole(SYSTEM_ROLE) {
+        coinbaseAmount = amount;
     }
 
     // Claim assets
