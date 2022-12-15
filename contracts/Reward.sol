@@ -32,15 +32,7 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
 
     uint256 public globalPreIssueAmount;
 
-    event Punish(
-        address punishAddress,
-        ByztineBehavior behavior,
-        uint256 amount
-    );
-
-    event Rewards(address rewardAddress, uint256 amount);
-
-    event Claim(address claimAddress, uint256 amount);
+    event Claim(address indexed claimAddress, uint256 amount);
 
     function initialize(address stakingAddress_, address systemAddress_)
         public
