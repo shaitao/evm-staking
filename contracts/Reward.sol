@@ -82,12 +82,15 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
         globalPreIssueAmount = amount;
     }
 
-    function systemSetCoinbaseAmount(uint256 amount) public onlyRole(SYSTEM_ROLE) {
+    function systemSetCoinbaseAmount(uint256 amount)
+        public
+        onlyRole(SYSTEM_ROLE)
+    {
         coinbaseAmount = amount;
     }
 
     // Claim assets
-    function claim(uint256 amount) external {
+    function claim(uint256 amount) external override {
         address delegator = msg.sender;
 
         require(rewards[delegator] >= amount, "insufficient amount");

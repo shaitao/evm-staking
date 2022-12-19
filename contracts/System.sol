@@ -124,4 +124,70 @@ contract System is Ownable, IBase {
             return ops;
         }
     }
+
+    function stake(
+        address validator,
+        bytes calldata public_key,
+        string calldata memo,
+        uint256 rate
+    ) external payable onlySystem {
+        System system = System(__self);
+
+        return system._stake(validator, public_key, memo, rate);
+    }
+
+    function _stake(
+        address validator,
+        bytes calldata public_key,
+        string calldata memo,
+        uint256 rate
+    ) external payable onlyProxy {
+        if (stakingAddress != address(0)) {
+            // Return unDelegate assets
+            IStaking staking = IStaking(stakingAddress);
+            staking.stake(validator, public_key, memo, rate);
+        }
+    }
+
+    function delegate(address validator) external payable onlySystem {
+        System system = System(__self);
+
+        system._delegate(validator);
+    }
+
+    function _delegate(address validator) external payable onlyProxy {
+        if (stakingAddress != address(0)) {
+            // Return unDelegate assets
+            IStaking staking = IStaking(stakingAddress);
+            staking.delegate(validator);
+        }
+    }
+
+    function undelegate(address validator, uint256 amount) external onlySystem {
+        System system = System(__self);
+
+        system._undelegate(validator, amount);
+    }
+
+    function _undelegate(address validator, uint256 amount) external onlyProxy {
+        if (stakingAddress != address(0)) {
+            // Return unDelegate assets
+            IStaking staking = IStaking(stakingAddress);
+            staking.undelegate(validator, amount);
+        }
+    }
+
+    function claim(uint256 amount) external onlySystem {
+        System system = System(__self);
+
+        system._claim(amount);
+    }
+
+    function _claim(uint256 amount) external onlyProxy {
+        if (rewardAddress != address(0)) {
+            IReward reward = IReward(rewardAddress);
+
+            reward.claim(amount);
+        }
+    }
 }

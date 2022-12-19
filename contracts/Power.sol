@@ -13,7 +13,11 @@ contract Power is Ownable, IBase, IPower {
 
     uint256 public minLimit;
 
-    constructor(address stakingAddress_, uint256 min, uint256 max) {
+    constructor(
+        address stakingAddress_,
+        uint256 min,
+        uint256 max
+    ) {
         stakingAddress = stakingAddress_;
         maxLimit = max;
         minLimit = min;

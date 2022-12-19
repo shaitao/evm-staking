@@ -350,8 +350,16 @@ contract Staking is
         string memo,
         uint256 rate
     );
-    event Delegation(address indexed validator, address indexed delegator, uint256 amount);
-    event Undelegation(address indexed validator, address indexed receiver, uint256 amount);
+    event Delegation(
+        address indexed validator,
+        address indexed delegator,
+        uint256 amount
+    );
+    event Undelegation(
+        address indexed validator,
+        address indexed receiver,
+        uint256 amount
+    );
 
     function initialize(address system_) public initializer {
         stakeMininum = 10000 * FRA_UNITS;
@@ -412,7 +420,15 @@ contract Staking is
 
         // delegatorRecordIndex[msg.sender].push(idx);
 
-        emit Stake(validator, public_key, ty, msg.sender, msg.value, memo, rate);
+        emit Stake(
+            validator,
+            public_key,
+            ty,
+            msg.sender,
+            msg.value,
+            memo,
+            rate
+        );
     }
 
     // Delegate assets
