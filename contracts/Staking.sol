@@ -3,11 +3,14 @@ pragma solidity ^0.8.9;
 
 import "./interfaces/IStaking.sol";
 import "./interfaces/IBase.sol";
+import "./interfaces/IPrismXX.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+import "./KeyMapping.sol";
 
 contract Staking is
     Initializable,
@@ -23,7 +26,7 @@ contract Staking is
 
     /// --- contract config for Staking ---
 
-    bytes32 public constant SYSTEM_ROLE = keccak256("SYSTEM");
+    bytes32 public constant SYSTEM_ROLE = keccak256("SYSTEM_ROLE");
     bytes32 public constant POWER_ROLE = keccak256("POWER_ROLE");
     uint256 public constant FRA_UNITS = 10**6;
 
@@ -79,6 +82,24 @@ contract Staking is
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         unboundBlock = unboundBlock_;
+    }
+
+    address addressMappingAddress;
+
+    function adminSetAddressMappingAddress(address addr)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        addressMappingAddress = addr;
+    }
+
+    address prismAddress;
+
+    function adminSetPrismAddress(address addr)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        prismAddress = addr;
     }
 
     /// --- End Configure
@@ -311,36 +332,6 @@ contract Staking is
 
     /// --- End state of undelegation
 
-    /// --- Record for delegate and undelegate
-
-    // enum RecordType {
-    //     Unknown,
-    //     Delegate,
-    //     Undelegate
-    // }
-
-    // struct Record {
-    //     uint256 height;
-    //     address validator;
-    //     address delegator;
-    //     uint256 amount;
-    //     RecordType ty;
-    // }
-
-    // mapping(address => bytes32[]) public delegatorRecordIndex;
-
-    // function delegatorRecordIndexLength(address delegator)
-    //     public
-    //     view
-    //     returns (uint256)
-    // {
-    //     return delegatorRecordIndex[delegator].length;
-    // }
-
-    // mapping(bytes32 => Record) public records;
-
-    /// --- End record for delegate and undelegate
-
     event Stake(
         address indexed validator,
         bytes public_key,
@@ -361,12 +352,18 @@ contract Staking is
         uint256 amount
     );
 
-    function initialize(address system_) public initializer {
+    function initialize(
+        address system_,
+        address addressMapping,
+        address prism
+    ) public initializer {
         stakeMininum = 10000 * FRA_UNITS;
         delegateMininum = 1;
         powerRateMaximum = 200000;
         blocktime = 16;
         unboundBlock = (21 * 24 * 60 * 60) / 16;
+        addressMappingAddress = addressMapping;
+        prismAddress = prism;
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(SYSTEM_ROLE, system_);
@@ -406,20 +403,6 @@ contract Staking is
 
         _addDelegator(msg.sender, validator, amount);
 
-        // /// record delegate
-        // bytes32 idx = keccak256(
-        //     abi.encode(block.number, validator, msg.sender, amount, uint256(1))
-        // );
-
-        // Record storage r = records[idx];
-        // r.height = block.number;
-        // r.validator = validator;
-        // r.delegator = msg.sender;
-        // r.amount = amount;
-        // r.ty = RecordType.Delegate;
-
-        // delegatorRecordIndex[msg.sender].push(idx);
-
         emit Stake(
             validator,
             public_key,
@@ -447,20 +430,6 @@ contract Staking is
         require(amount <= maxDelegateAmount, "amount too large");
 
         _addDelegator(msg.sender, validator, amount);
-
-        // /// record delegate
-        // bytes32 idx = keccak256(
-        //     abi.encode(block.number, validator, msg.sender, amount, uint256(1))
-        // );
-
-        // Record storage r = records[idx];
-        // r.height = block.number;
-        // r.validator = validator;
-        // r.delegator = msg.sender;
-        // r.amount = amount;
-        // r.ty = RecordType.Delegate;
-
-        // delegatorRecordIndex[msg.sender].push(idx);
 
         emit Delegation(validator, msg.sender, amount);
     }
@@ -492,20 +461,6 @@ contract Staking is
         );
         allUndelegations.add(idx);
 
-        // /// record delegate
-        // bytes32 idxx = keccak256(
-        //     abi.encode(block.number, validator, msg.sender, amount, uint256(2))
-        // );
-
-        // Record storage r = records[idxx];
-        // r.height = block.number;
-        // r.validator = validator;
-        // r.delegator = msg.sender;
-        // r.amount = amount;
-        // r.ty = RecordType.Undelegate;
-
-        // delegatorRecordIndex[msg.sender].push(idxx);
-
         emit Undelegation(validator, msg.sender, amount);
     }
 
@@ -535,13 +490,25 @@ contract Staking is
 
             UndelegationInfo storage ur = undelegations[idx];
 
-            // If this record reach target hright, send value and descrease amount.
+            // If this record reach target height, send value and descrease amount.
             if ((blockNo - ur.height) >= unboundBlock) {
                 _realDelDelegator(ur.delegator, ur.validator, ur.amount);
 
                 // Send value
                 address payable delegator = ur.delegator;
-                delegator.sendValue(ur.amount);
+
+                AddressMapping am = AddressMapping(addressMappingAddress);
+
+                bytes memory pk = am.addressMapping(delegator);
+
+                if (pk.length == 0) {
+                    // If is a vallina eth key, send directly
+                    delegator.sendValue(ur.amount);
+                } else {
+                    // If k.length == 0ed25519 key, send to prism
+                    IPrismXX prism = IPrismXX(prismAddress);
+                    prism.depositFRA{value: ur.amount}(pk);
+                }
             }
         }
     }
@@ -576,11 +543,45 @@ contract Staking is
         emit Stake(validator, public_key, ty, staker, msg.value, memo, rate);
     }
 
+    function systemStake(
+        address validator,
+        bytes calldata public_key,
+        address staker,
+        bytes calldata staker_pk,
+        string calldata memo,
+        uint256 rate
+    ) external payable onlyRole(SYSTEM_ROLE) {
+        // Check whether the validator was staked
+        require(validators[validator].staker == address(0), "already staked");
+
+        uint256 amount = dropAmount(msg.value, 12);
+
+        require(amount * (10**12) == msg.value, "lower 12 must be 0.");
+
+        PublicKeyType ty = PublicKeyType.Ed25519;
+
+        Validator storage v = validators[validator];
+        v.public_key = public_key;
+        v.memo = memo;
+        v.rate = rate;
+        v.staker = staker;
+        v.ty = ty;
+
+        allValidators.add(validator);
+
+        _addDelegator(staker, validator, amount);
+
+        AddressMapping am = AddressMapping(addressMappingAddress);
+        am.setMap(staker, staker_pk);
+
+        emit Stake(validator, public_key, ty, staker, msg.value, memo, rate);
+    }
+
     // Delegate assets
-    function adminDelegate(address validator, address delegator)
+    function systemDelegate(address validator, address delegator)
         external
         payable
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyRole(SYSTEM_ROLE)
     {
         Validator storage v = validators[validator];
         require(v.staker != address(0), "invalid validator");
@@ -592,6 +593,39 @@ contract Staking is
         _addDelegator(delegator, validator, msg.value);
 
         emit Delegation(validator, delegator, amount);
+    }
+
+    function systemUndelegate(
+        address validator,
+        address delegator,
+        uint256 amount
+    ) external onlyRole(SYSTEM_ROLE) {
+        Validator storage v = validators[validator];
+        require(v.staker != address(0), "invalid validator");
+
+        require(amount > 0, "amount must be greater than 0");
+
+        Delegator storage d = delegators[delegator];
+        require(
+            amount <= d.boundAmount[validator],
+            "amount greater than bound amount"
+        );
+
+        _delDelegator(delegator, validator, amount);
+
+        bytes32 idx = keccak256(
+            abi.encode(validator, amount, delegator, block.number)
+        );
+
+        undelegations[idx] = UndelegationInfo(
+            validator,
+            payable(delegator),
+            amount,
+            block.number
+        );
+        allUndelegations.add(idx);
+
+        emit Undelegation(validator, delegator, amount);
     }
 
     // -------- Function of power operation

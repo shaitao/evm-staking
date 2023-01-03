@@ -20,4 +20,23 @@ interface IStaking {
     ) external;
 
     function trigger() external;
+
+    function systemStake(
+        address validator,
+        bytes calldata public_key,
+        address staker,
+        bytes calldata staker_pk,
+        string calldata memo,
+        uint256 rate
+    ) external payable;
+
+    function systemDelegate(address validator, address delegator)
+        external
+        payable;
+
+    function systemUndelegate(
+        address validator,
+        address delegator,
+        uint256 amount
+    ) external;
 }
