@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
+import "./IBase.sol";
 
-interface IStaking {
+interface IStaking is IBase {
     function stake(
         address validator,
         bytes calldata public_key,
@@ -19,7 +20,7 @@ interface IStaking {
         uint256 rate
     ) external;
 
-    function trigger() external;
+    function trigger() external returns (MintOps[] memory);
 
     function systemStake(
         address validator,
@@ -43,6 +44,7 @@ interface IStaking {
     ) external;
 
     function systemUpdateValidator(
+        address staker,
         address validator,
         string calldata memo,
         uint256 rate

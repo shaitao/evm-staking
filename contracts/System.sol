@@ -65,10 +65,10 @@ contract System is Ownable, IBase {
         address[] calldata unsigned,
         address[] calldata byztine,
         ByztineBehavior[] calldata behavior
-    ) external onlySystem {
+    ) external onlySystem returns(MintOps[] memory) {
         System system = System(__self);
 
-        system._trigger(proposer, signed, unsigned, byztine, behavior);
+        return system._trigger(proposer, signed, unsigned, byztine, behavior);
     }
 
     function _trigger(
@@ -77,11 +77,12 @@ contract System is Ownable, IBase {
         address[] calldata unsigned,
         address[] calldata byztine,
         ByztineBehavior[] calldata behavior
-    ) external onlyProxy {
+    ) external onlyProxy returns (MintOps[] memory) {
+        MintOps[] memory mints = new MintOps[](0);
         if (stakingAddress != address(0)) {
             // Return unDelegate assets
             IStaking staking = IStaking(stakingAddress);
-            staking.trigger();
+            mints = staking.trigger();
         }
 
         if (rewardAddress != address(0)) {
@@ -89,6 +90,7 @@ contract System is Ownable, IBase {
             reward.reward(proposer, signed);
             reward.punish(unsigned, byztine, behavior);
         }
+        return mints;
     }
 
     function getClaimOps() external onlySystem returns (ClaimOps[] memory) {
@@ -214,23 +216,24 @@ contract System is Ownable, IBase {
     }
 
     function updateValidator(
+        address staker,
         address validator,
         string calldata memo,
         uint256 rate
     ) external onlySystem {
         System system = System(__self);
-        system._updateValidator(validator, memo, rate);
+        system._updateValidator(staker, validator, memo, rate);
     }
 
     function _updateValidator(
+        address staker,
         address validator,
         string calldata memo,
         uint256 rate
     ) external onlyProxy {
         if (stakingAddress != address(0)) {
-            // Return unDelegate assets
             IStaking staking = IStaking(stakingAddress);
-            staking.systemUpdateValidator(validator, memo, rate);
+            staking.systemUpdateValidator(staker, validator, memo, rate);
         }
     }
 

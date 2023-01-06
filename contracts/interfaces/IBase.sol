@@ -25,4 +25,9 @@ interface IBase {
         address addr;
         uint256 amount;
     }
+
+    struct MintOps {
+        bytes public_key;
+        uint256 amount;
+    }
 }
