@@ -325,6 +325,8 @@ contract Staking is
         uint256 amount
     );
 
+    event MintOps(bytes public_key, uint256 amount);
+
     function initialize(
         address system_,
         address addressMapping
@@ -440,17 +442,10 @@ contract Staking is
     }
 
     // Return unDelegate assets
-    function trigger()
-        public
-        override
-        onlyRole(SYSTEM_ROLE)
-        returns (MintOps[] memory)
-    {
+    function trigger() public override onlyRole(SYSTEM_ROLE) {
         uint256 blockNo = block.number;
-
         uint256 length = allUndelegations.length();
 
-        MintOps[] memory mints = new MintOps[](length);
         for (uint256 i; i < length; i++) {
             bytes32 idx = allUndelegations.at(i);
 
@@ -472,12 +467,10 @@ contract Staking is
                     delegator.sendValue(ur.amount * 10 ** 12);
                 } else {
                     // If k.length == 0ed25519 key, mint
-                    mints[i].public_key = pk;
-                    mints[i].amount = ur.amount;
+                    emit MintOps(pk, ur.amount);
                 }
             }
         }
-        return mints;
     }
 
     function adminStake(

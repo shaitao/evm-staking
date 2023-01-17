@@ -20,7 +20,7 @@ interface IStaking is IBase {
         uint256 rate
     ) external;
 
-    function trigger() external returns (MintOps[] memory);
+    function trigger() external;
 
     function systemStake(
         address validator,

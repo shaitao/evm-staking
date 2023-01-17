@@ -65,7 +65,7 @@ contract System is Ownable, IBase {
         address[] calldata unsigned,
         address[] calldata byztine,
         ByztineBehavior[] calldata behavior
-    ) external onlySystem returns(MintOps[] memory) {
+    ) external onlySystem {
         System system = System(__self);
 
         return system._trigger(proposer, signed, unsigned, byztine, behavior);
@@ -77,12 +77,11 @@ contract System is Ownable, IBase {
         address[] calldata unsigned,
         address[] calldata byztine,
         ByztineBehavior[] calldata behavior
-    ) external onlyProxy returns (MintOps[] memory) {
-        MintOps[] memory mints = new MintOps[](0);
+    ) external onlyProxy {
         if (stakingAddress != address(0)) {
             // Return unDelegate assets
             IStaking staking = IStaking(stakingAddress);
-            mints = staking.trigger();
+            staking.trigger();
         }
 
         if (rewardAddress != address(0)) {
@@ -90,7 +89,6 @@ contract System is Ownable, IBase {
             reward.reward(proposer, signed);
             reward.punish(unsigned, byztine, behavior);
         }
-        return mints;
     }
 
     function getClaimOps() external onlySystem returns (ClaimOps[] memory) {
