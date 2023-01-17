@@ -68,7 +68,7 @@ contract System is Ownable, IBase {
     ) external onlySystem {
         System system = System(__self);
 
-        system._trigger(proposer, signed, unsigned, byztine, behavior);
+        return system._trigger(proposer, signed, unsigned, byztine, behavior);
     }
 
     function _trigger(
@@ -214,23 +214,24 @@ contract System is Ownable, IBase {
     }
 
     function updateValidator(
+        address staker,
         address validator,
         string calldata memo,
         uint256 rate
     ) external onlySystem {
         System system = System(__self);
-        system._updateValidator(validator, memo, rate);
+        system._updateValidator(staker, validator, memo, rate);
     }
 
     function _updateValidator(
+        address staker,
         address validator,
         string calldata memo,
         uint256 rate
     ) external onlyProxy {
         if (stakingAddress != address(0)) {
-            // Return unDelegate assets
             IStaking staking = IStaking(stakingAddress);
-            staking.systemUpdateValidator(validator, memo, rate);
+            staking.systemUpdateValidator(staker, validator, memo, rate);
         }
     }
 

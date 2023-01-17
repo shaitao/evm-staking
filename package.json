@@ -4,11 +4,12 @@
     "@nomicfoundation/hardhat-toolbox": "^1.0.2",
     "@nomiclabs/hardhat-ethers": "^2.2.0",
     "@openzeppelin/hardhat-upgrades": "^1.21.0",
-    "hardhat": "^2.10.1",
+    "axios": "^1.2.0",
+    "hardhat": "^2.12.5",
+    "hardhat-abi-exporter": "^2.10.1",
     "node": "^16.13.2",
     "prettier": "^2.7.1",
-    "prettier-plugin-solidity": "^1.0.0-beta.24",
-    "axios": "^1.2.0"
+    "prettier-plugin-solidity": "^1.0.0-beta.24"
   },
   "scripts": {
     "prettier": "prettier --write 'contracts/**/*.sol'"

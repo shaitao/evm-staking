@@ -3,14 +3,12 @@ pragma solidity ^0.8.9;
 
 import "./interfaces/IStaking.sol";
 import "./interfaces/IBase.sol";
-import "./interfaces/IPrismXX.sol";
+import "./AddressMapping.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
-import "./AddressMapping.sol";
 
 contract Staking is
     Initializable,
@@ -85,14 +83,6 @@ contract Staking is
         address addr
     ) public onlyRole(DEFAULT_ADMIN_ROLE) {
         addressMappingAddress = addr;
-    }
-
-    address prismAddress;
-
-    function adminSetPrismAddress(
-        address addr
-    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        prismAddress = addr;
     }
 
     /// --- End Configure
@@ -335,10 +325,11 @@ contract Staking is
         uint256 amount
     );
 
+    event MintOps(bytes public_key, uint256 amount);
+
     function initialize(
         address system_,
-        address addressMapping,
-        address prism
+        address addressMapping
     ) public initializer {
         stakeMininum = 10000 * FRA_UNITS;
         delegateMininum = 1;
@@ -346,7 +337,6 @@ contract Staking is
         blocktime = 16;
         unboundBlock = (21 * 24 * 60 * 60) / 16;
         addressMappingAddress = addressMapping;
-        prismAddress = prism;
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(SYSTEM_ROLE, system_);
@@ -359,9 +349,7 @@ contract Staking is
         string calldata memo,
         uint256 rate
     ) external payable override {
-        uint256 amount = dropAmount(msg.value, 12);
-
-        require(amount * (10 ** 12) == msg.value, "lower 12 must be 0.");
+        uint256 amount = dropAmount12(msg.value);
 
         require(amount >= stakeMininum, "amount too small");
 
@@ -377,9 +365,7 @@ contract Staking is
         Validator storage v = validators[validator];
         require(v.staker != address(0), "invalid validator");
 
-        uint256 amount = dropAmount(msg.value, 12);
-
-        require(amount * (10 ** 12) == msg.value, "lower 12 must be 0.");
+        uint256 amount = dropAmount12(msg.value);
 
         require(amount >= delegateMininum, "amount is too small");
 
@@ -393,7 +379,8 @@ contract Staking is
     }
 
     // UnDelegate assets
-    function undelegate(address validator, uint256 amount) external override {
+    function undelegate(address validator, uint256 _amount) external override {
+        uint256 amount = dropAmount12(_amount);
         Validator storage v = validators[validator];
         require(v.staker != address(0), "invalid validator");
 
@@ -440,10 +427,16 @@ contract Staking is
     // platform调用的Update validator
     // 该操作只能有 system来操作
     function systemUpdateValidator(
+        address staker,
         address validator,
         string calldata memo,
         uint256 rate
-    ) public onlyRole(SYSTEM_ROLE){
+    ) public onlyRole(SYSTEM_ROLE) {
+        // Check whether the validator is a stacker
+        require(
+            validators[validator].staker == staker,
+            "Only staker of the validator can update it."
+        );
         validators[validator].memo = memo;
         validators[validator].rate = rate;
     }
@@ -451,7 +444,6 @@ contract Staking is
     // Return unDelegate assets
     function trigger() public override onlyRole(SYSTEM_ROLE) {
         uint256 blockNo = block.number;
-
         uint256 length = allUndelegations.length();
 
         for (uint256 i; i < length; i++) {
@@ -460,7 +452,7 @@ contract Staking is
             UndelegationInfo storage ur = undelegations[idx];
 
             // If this record reach target height, send value and descrease amount.
-            if ((blockNo - ur.height) >= unboundBlock) {
+            if ((blockNo - ur.height) == unboundBlock) {
                 _realDelDelegator(ur.delegator, ur.validator, ur.amount);
 
                 // Send value
@@ -472,11 +464,10 @@ contract Staking is
 
                 if (pk.length == 0) {
                     // If is a vallina eth key, send directly
-                    delegator.sendValue(ur.amount);
+                    delegator.sendValue(ur.amount * 10 ** 12);
                 } else {
-                    // If k.length == 0ed25519 key, send to prism
-                    IPrismXX prism = IPrismXX(prismAddress);
-                    prism.depositFRA{value: ur.amount}(pk);
+                    // If k.length == 0ed25519 key, mint
+                    emit MintOps(pk, ur.amount);
                 }
             }
         }
@@ -489,9 +480,7 @@ contract Staking is
         string calldata memo,
         uint256 rate
     ) external payable onlyRole(DEFAULT_ADMIN_ROLE) {
-        uint256 amount = dropAmount(msg.value, 12);
-        require(amount * (10 ** 12) == msg.value, "lower 12 must be 0.");
-
+        uint256 amount = dropAmount12(msg.value);
         _stake(validator, public_key, staker, memo, rate, amount);
     }
 
@@ -504,10 +493,7 @@ contract Staking is
         string calldata memo,
         uint256 rate
     ) external payable onlyRole(SYSTEM_ROLE) {
-
-        uint256 amount = dropAmount(msg.value, 12);
-        require(amount * (10 ** 12) == msg.value, "lower 12 must be 0.");
-
+        uint256 amount = dropAmount12(msg.value);
         _stake(validator, public_key, staker, memo, rate, amount);
         AddressMapping am = AddressMapping(addressMappingAddress);
         am.setMap(staker, staker_pk);
@@ -549,11 +535,9 @@ contract Staking is
         Validator storage v = validators[validator];
         require(v.staker != address(0), "invalid validator");
 
-        uint256 amount = dropAmount(msg.value, 12);
+        uint256 amount = dropAmount12(msg.value);
 
-        require(amount * (10 ** 12) == msg.value, "lower 12 must be 0.");
-
-        _addDelegator(delegator, validator, msg.value);
+        _addDelegator(delegator, validator, amount);
 
         AddressMapping am = AddressMapping(addressMappingAddress);
         am.setMap(delegator, delegator_pk);
@@ -564,8 +548,9 @@ contract Staking is
     function systemUndelegate(
         address validator,
         address delegator,
-        uint256 amount
+        uint256 _amount
     ) external onlyRole(SYSTEM_ROLE) {
+        uint256 amount = dropAmount12(_amount);
         Validator storage v = validators[validator];
         require(v.staker != address(0), "invalid validator");
 
@@ -619,43 +604,41 @@ contract Staking is
         totalDelegationAmount -= realAmount;
     }
 
-    function systemSetDelegation(
-        address validator,
-        address delegator,
-        uint256 amount
-    ) public onlyRole(SYSTEM_ROLE) {
-        _addDelegator(delegator, validator, amount);
-    }
+    // function systemSetDelegation(
+    //     address validator,
+    //     address delegator,
+    //     uint256 amount
+    // ) public onlyRole(SYSTEM_ROLE) {
+    //     _addDelegator(delegator, validator, amount);
+    // }
 
-    function systemSetDelegationUnbound(
-        address validator,
-        address payable delegator,
-        uint256 amount,
-        uint256 target_height
-    ) public onlyRole(SYSTEM_ROLE) {
-        _delDelegator(delegator, validator, amount);
+    // function systemSetDelegationUnbound(
+    //     address validator,
+    //     address payable delegator,
+    //     uint256 amount,
+    //     uint256 target_height
+    // ) public onlyRole(SYSTEM_ROLE) {
+    //     _delDelegator(delegator, validator, amount);
 
-        bytes32 idx = keccak256(
-            abi.encode(validator, amount, delegator, target_height)
-        );
+    //     bytes32 idx = keccak256(
+    //         abi.encode(validator, amount, delegator, target_height)
+    //     );
 
-        undelegations[idx] = UndelegationInfo(
-            validator,
-            payable(delegator),
-            amount,
-            target_height
-        );
-        allUndelegations.add(idx);
-    }
+    //     undelegations[idx] = UndelegationInfo(
+    //         validator,
+    //         payable(delegator),
+    //         amount,
+    //         target_height
+    //     );
+    //     allUndelegations.add(idx);
+    // }
 
     // -------- utils function
 
-    function dropAmount(
-        uint256 amount,
-        uint8 decimal
-    ) public pure returns (uint256) {
-        uint256 pow = 10 ** decimal;
+    function dropAmount12(uint256 amount) public pure returns (uint256) {
+        uint256 pow = 10 ** 12;
         uint256 res = amount / pow;
+        require(res * (10 ** 12) == amount, "lower 12 must be 0.");
         return res;
     }
 }
