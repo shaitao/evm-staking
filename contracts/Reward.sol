@@ -115,17 +115,17 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
     }
 
     // Get the data currently claiming
-    function getClaimOps()
-        external
-        override
-        onlyRole(SYSTEM_ROLE)
-        returns (ClaimOps[] memory)
-    {
+    function mintClaims() external override onlyRole(SYSTEM_ROLE) {
         ClaimOps[] memory ops = claimOps;
 
-        delete claimOps;
+        uint256 length = ops.length;
 
-        return ops;
+        for (uint256 i = 0; i < length; i++) {
+            ClaimOps memory op = ops[i];
+            emit MintClaim(op.addr, op.amount);
+        }
+
+        delete claimOps;
     }
 
     // ------ Begin reward

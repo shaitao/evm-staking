@@ -103,20 +103,16 @@ contract System is Ownable, IBase {
         }
     }
 
-    function getClaimOps() external onlySystem returns (ClaimOps[] memory) {
+    function mintClaims() external onlySystem {
         System system = System(__self);
 
-        return system._getClaimOps();
+        return system._mintClaims();
     }
 
-    function _getClaimOps() external onlyProxy returns (ClaimOps[] memory) {
+    function _mintClaims() external onlyProxy {
         if (rewardAddress != address(0)) {
             IReward reward = IReward(rewardAddress);
-            return reward.getClaimOps();
-        } else {
-            ClaimOps[] memory ops = new ClaimOps[](0);
-
-            return ops;
+            reward.mintClaims();
         }
     }
 
