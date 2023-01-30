@@ -9,7 +9,7 @@ const axios = require("axios");
 const utils = require("./address_utils");
 
 async function main() {
-    let memo1 = {"desc":"a","logo":"https://i.imgur.com/JfxwM7J.png","name":"Koncrete Validator","website":"Koncrete.org"};
+    let memo1 = { "desc": "a", "logo": "https://i.imgur.com/JfxwM7J.png", "name": "Koncrete Validator", "website": "Koncrete.org" };
 
     const sa = "0x72488bAa718F52B76118C79168E55c209056A2E6";
 
@@ -21,6 +21,8 @@ async function main() {
 
     const addrs = await utils.get_address();
 
+    console.log("init validators, staking addres:", addrs.staking);
+
     const staking = await Staking.attach(addrs.staking);
 
     for (let v of vs) {
@@ -31,7 +33,7 @@ async function main() {
         console.log("public key is:", public_key);
 
         await staking.adminStake(address, public_key, sa, JSON.stringify(memo1), 20000, {
-            value: ethers.utils.parseEther("3000000"),
+            value: ethers.utils.parseEther("3000000"), gasLimit: 3000000
         });
 
         console.log();

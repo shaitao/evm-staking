@@ -15,4 +15,6 @@ interface IReward is IBase {
     function getClaimOps() external returns (ClaimOps[] memory);
 
     function claim(uint256 amount) external;
+
+    function systemClaim(address delegator, uint256 amount) external;
 }

@@ -91,6 +91,18 @@ contract System is Ownable, IBase {
         }
     }
 
+    function claim(address delegator, uint256 amount) external onlySystem {
+        System system = System(__self);
+        system._claim(delegator, amount);
+    }
+
+    function _claim(address delegator, uint256 amount) external onlyProxy {
+        if (rewardAddress != address(0)) {
+            IReward reward = IReward(rewardAddress);
+            reward.systemClaim(delegator, amount);
+        }
+    }
+
     function getClaimOps() external onlySystem returns (ClaimOps[] memory) {
         System system = System(__self);
 
@@ -232,20 +244,6 @@ contract System is Ownable, IBase {
         if (stakingAddress != address(0)) {
             IStaking staking = IStaking(stakingAddress);
             staking.systemUpdateValidator(staker, validator, memo, rate);
-        }
-    }
-
-    function claim(uint256 amount) external onlySystem {
-        System system = System(__self);
-
-        system._claim(amount);
-    }
-
-    function _claim(uint256 amount) external onlyProxy {
-        if (rewardAddress != address(0)) {
-            IReward reward = IReward(rewardAddress);
-
-            reward.claim(amount);
         }
     }
 }
