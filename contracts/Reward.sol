@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import "./Staking.sol";
 import "./interfaces/IReward.sol";
+import "./interfaces/IBase.sol";
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -11,7 +12,7 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     bytes32 public constant SYSTEM_ROLE = keccak256("SYSTEM");
-    uint256 public constant RATE_DECIMAL = 10**8;
+    uint256 public constant RATE_DECIMAL = 10 ** 8;
 
     // Staking contract address
     address public stakingAddress;
@@ -34,24 +35,23 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
 
     event Claim(address indexed claimAddress, uint256 amount);
 
-    function initialize(address stakingAddress_, address systemAddress_)
-        public
-        initializer
-    {
-        duplicateVotePunishRate = 5 * 10**6;
-        lightClientAttackPunishRate = 10**6;
+    function initialize(
+        address stakingAddress_,
+        address systemAddress_
+    ) public initializer {
+        duplicateVotePunishRate = 5 * 10 ** 6;
+        lightClientAttackPunishRate = 10 ** 6;
         offLinePunishRate = 1;
-        unknownPunishRate = 30 * 10**6;
+        unknownPunishRate = 30 * 10 ** 6;
         stakingAddress = stakingAddress_;
 
         _setupRole(SYSTEM_ROLE, systemAddress_);
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    function adminSetDuplicateVotePunishRate(uint256 duplicateVotePunishRate_)
-        public
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function adminSetDuplicateVotePunishRate(
+        uint256 duplicateVotePunishRate_
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
         duplicateVotePunishRate = duplicateVotePunishRate_;
     }
 
@@ -61,31 +61,27 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
         lightClientAttackPunishRate = lightClientAttackPunishRate_;
     }
 
-    function adminSetOffLinePunishRate(uint256 offLinePunishRate_)
-        public
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function adminSetOffLinePunishRate(
+        uint256 offLinePunishRate_
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
         offLinePunishRate = offLinePunishRate_;
     }
 
-    function adminSetUnknownPunishRate(uint256 unknownPunishRate_)
-        public
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function adminSetUnknownPunishRate(
+        uint256 unknownPunishRate_
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
         unknownPunishRate = unknownPunishRate_;
     }
 
-    function systemSetGlobalPreIssueAmount(uint256 amount)
-        public
-        onlyRole(SYSTEM_ROLE)
-    {
+    function systemSetGlobalPreIssueAmount(
+        uint256 amount
+    ) public onlyRole(SYSTEM_ROLE) {
         globalPreIssueAmount = amount;
     }
 
-    function systemSetCoinbaseAmount(uint256 amount)
-        public
-        onlyRole(SYSTEM_ROLE)
-    {
+    function systemSetCoinbaseAmount(
+        uint256 amount
+    ) public onlyRole(SYSTEM_ROLE) {
         coinbaseAmount = amount;
     }
 
@@ -100,33 +96,44 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
         emit Claim(msg.sender, amount);
     }
 
-    function adminReward(address delegator, uint256 amount)
-        public
-        onlyRole(SYSTEM_ROLE)
-    {
+    event MintClaim(address delegator, uint256 amount);
+
+    function systemClaim(
+        address delegator,
+        uint256 amount
+    ) external override onlyRole(SYSTEM_ROLE) {
+        require(rewards[delegator] >= amount, "insufficient amount");
+        rewards[delegator] -= amount;
+        emit MintClaim(delegator, amount);
+    }
+
+    function adminReward(
+        address delegator,
+        uint256 amount
+    ) public onlyRole(SYSTEM_ROLE) {
         rewards[delegator] = amount;
     }
 
     // Get the data currently claiming
-    function getClaimOps()
-        external
-        override
-        onlyRole(SYSTEM_ROLE)
-        returns (ClaimOps[] memory)
-    {
+    function mintClaims() external override onlyRole(SYSTEM_ROLE) {
         ClaimOps[] memory ops = claimOps;
 
-        delete claimOps;
+        uint256 length = ops.length;
 
-        return ops;
+        for (uint256 i = 0; i < length; i++) {
+            ClaimOps memory op = ops[i];
+            emit MintClaim(op.addr, op.amount);
+        }
+
+        delete claimOps;
     }
 
     // ------ Begin reward
 
-    function reward(address proposer, address[] calldata signed)
-        public
-        onlyRole(SYSTEM_ROLE)
-    {
+    function reward(
+        address proposer,
+        address[] calldata signed
+    ) public onlyRole(SYSTEM_ROLE) {
         Staking sc = Staking(stakingAddress);
 
         uint256 totalPower = sc.totalDelegationAmount();
@@ -179,11 +186,10 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
         }
     }
 
-    function getDelegateAmountWithReward(address delegator, address validator)
-        public
-        view
-        returns (uint256)
-    {
+    function getDelegateAmountWithReward(
+        address delegator,
+        address validator
+    ) public view returns (uint256) {
         uint256 amount = getDelegatorAmountOfValidator(delegator, validator);
         uint256 delegatorsAmount = getDelegatorTotalAmount(delegator);
 
@@ -206,11 +212,9 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
         return a0 / a1;
     }
 
-    function getProposerReturnRate(address[] calldata signed)
-        public
-        view
-        returns (uint256 rate)
-    {
+    function getProposerReturnRate(
+        address[] calldata signed
+    ) public view returns (uint256 rate) {
         (uint256 signedPower, uint256 totalPower) = lastVotePercent(signed);
 
         //                        0, 1,      2,      3,      4,      5,       6
@@ -259,11 +263,9 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
         return rate;
     }
 
-    function lastVotePercent(address[] calldata signed)
-        public
-        view
-        returns (uint256, uint256)
-    {
+    function lastVotePercent(
+        address[] calldata signed
+    ) public view returns (uint256, uint256) {
         Staking sc = Staking(stakingAddress);
         uint256 totalPower = sc.totalDelegationAmount();
         uint256 signedPower;
@@ -355,10 +357,10 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
         sc.powerDesc(validator, delegator, punishAmount);
     }
 
-    function systemSetRewards(address delegator, uint256 amount)
-        public
-        onlyRole(SYSTEM_ROLE)
-    {
+    function systemSetRewards(
+        address delegator,
+        uint256 amount
+    ) public onlyRole(SYSTEM_ROLE) {
         rewards[delegator] = amount;
     }
 
@@ -380,11 +382,9 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
         return staker;
     }
 
-    function getCommissionRate(address validator)
-        public
-        view
-        returns (uint256)
-    {
+    function getCommissionRate(
+        address validator
+    ) public view returns (uint256) {
         Staking sc = Staking(stakingAddress);
 
         (, , , uint256 rate, , , ) = sc.validators(validator);
@@ -392,11 +392,10 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
         return rate;
     }
 
-    function getDelegatorAmountOfValidator(address delegator, address validator)
-        public
-        view
-        returns (uint256)
-    {
+    function getDelegatorAmountOfValidator(
+        address delegator,
+        address validator
+    ) public view returns (uint256) {
         Staking sc = Staking(stakingAddress);
 
         uint256 unbound = sc.delegatorsUnboundAmount(delegator, validator);
@@ -405,11 +404,9 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
         return unbound + bound;
     }
 
-    function getDelegatorTotalAmount(address delegator)
-        public
-        view
-        returns (uint256)
-    {
+    function getDelegatorTotalAmount(
+        address delegator
+    ) public view returns (uint256) {
         Staking sc = Staking(stakingAddress);
 
         uint256 amount = sc.delegators(delegator);
@@ -417,11 +414,9 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
         return amount;
     }
 
-    function getPunishRate(ByztineBehavior byztine)
-        public
-        view
-        returns (uint256)
-    {
+    function getPunishRate(
+        ByztineBehavior byztine
+    ) public view returns (uint256) {
         if (byztine == ByztineBehavior.DuplicateVote) {
             return duplicateVotePunishRate;
         } else if (byztine == ByztineBehavior.LightClientAttack) {
@@ -433,11 +428,9 @@ contract Reward is Initializable, AccessControlEnumerableUpgradeable, IReward {
         }
     }
 
-    function getDelegators(address validator)
-        public
-        view
-        returns (address[] memory delegators)
-    {
+    function getDelegators(
+        address validator
+    ) public view returns (address[] memory delegators) {
         Staking sc = Staking(stakingAddress);
 
         uint256 length = sc.validatorOfDelegatorLength(validator);

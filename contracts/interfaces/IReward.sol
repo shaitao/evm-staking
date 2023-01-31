@@ -12,7 +12,9 @@ interface IReward is IBase {
         ByztineBehavior[] calldata behavior
     ) external;
 
-    function getClaimOps() external returns (ClaimOps[] memory);
+    function mintClaims() external;
 
     function claim(uint256 amount) external;
+
+    function systemClaim(address delegator, uint256 amount) external;
 }
