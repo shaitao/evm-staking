@@ -1,0 +1,15 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "bytes",
+        "name": "_to",
+        "type": "bytes"
+      }
+    ],
+    "name": "depositFRA",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  }
+]
