@@ -3,13 +3,13 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "address",
         "name": "validator",
         "type": "address"
       },
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "address",
         "name": "delegator",
         "type": "address"
@@ -35,6 +35,25 @@
       }
     ],
     "name": "Initialized",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "public_key",
+        "type": "bytes"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "MintOps",
     "type": "event"
   },
   {
@@ -116,6 +135,12 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "address",
+        "name": "validator",
+        "type": "address"
+      },
+      {
         "indexed": false,
         "internalType": "bytes",
         "name": "public_key",
@@ -123,6 +148,12 @@
       },
       {
         "indexed": false,
+        "internalType": "enum IBase.PublicKeyType",
+        "name": "ty",
+        "type": "uint8"
+      },
+      {
+        "indexed": true,
         "internalType": "address",
         "name": "staker",
         "type": "address"
@@ -153,13 +184,13 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "address",
         "name": "validator",
         "type": "address"
       },
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "address",
         "name": "receiver",
         "type": "address"
@@ -202,6 +233,19 @@
   },
   {
     "inputs": [],
+    "name": "POWER_ROLE",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "SYSTEM_ROLE",
     "outputs": [
       {
@@ -217,18 +261,13 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "validator",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "delegator",
+        "name": "addr",
         "type": "address"
       }
     ],
-    "name": "adminDelegate",
+    "name": "adminSetAddressMappingAddress",
     "outputs": [],
-    "stateMutability": "payable",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -543,49 +582,6 @@
         "internalType": "address",
         "name": "",
         "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "delegatorRecordIndex",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "delegator",
-        "type": "address"
-      }
-    ],
-    "name": "delegatorRecordIndexLength",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
       }
     ],
     "name": "delegators",
@@ -653,14 +649,9 @@
         "internalType": "uint256",
         "name": "amount",
         "type": "uint256"
-      },
-      {
-        "internalType": "uint8",
-        "name": "decimal",
-        "type": "uint8"
       }
     ],
-    "name": "dropAmount",
+    "name": "dropAmount12",
     "outputs": [
       {
         "internalType": "uint256",
@@ -781,6 +772,11 @@
         "internalType": "address",
         "name": "system_",
         "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "addressMapping",
+        "type": "address"
       }
     ],
     "name": "initialize",
@@ -802,33 +798,7 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "powerRateMaximum",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "name": "records",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "height",
-        "type": "uint256"
-      },
       {
         "internalType": "address",
         "name": "validator",
@@ -843,11 +813,21 @@
         "internalType": "uint256",
         "name": "amount",
         "type": "uint256"
-      },
+      }
+    ],
+    "name": "powerDesc",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "powerRateMaximum",
+    "outputs": [
       {
-        "internalType": "enum Staking.RecordType",
-        "name": "ty",
-        "type": "uint8"
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -950,6 +930,118 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "validator",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "delegator",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes",
+        "name": "delegator_pk",
+        "type": "bytes"
+      }
+    ],
+    "name": "systemDelegate",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "validator",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes",
+        "name": "public_key",
+        "type": "bytes"
+      },
+      {
+        "internalType": "address",
+        "name": "staker",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes",
+        "name": "staker_pk",
+        "type": "bytes"
+      },
+      {
+        "internalType": "string",
+        "name": "memo",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "rate",
+        "type": "uint256"
+      }
+    ],
+    "name": "systemStake",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "validator",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "delegator",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "systemUndelegate",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "staker",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "validator",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "memo",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "rate",
+        "type": "uint256"
+      }
+    ],
+    "name": "systemUpdateValidator",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "totalDelegationAmount",
     "outputs": [
@@ -991,7 +1083,7 @@
       },
       {
         "internalType": "uint256",
-        "name": "amount",
+        "name": "_amount",
         "type": "uint256"
       }
     ],
