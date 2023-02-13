@@ -26,6 +26,10 @@ module.exports = {
         qa04: {
             url: "https://dev-qa04.dev.findora.org:8545",
             accounts: ["0x4d05b965f821ea900ddd995dfa1b6caa834eaaa1ebe100a9760baf9331aae567"]
+        },
+        qa05: {
+            url: "https://dev-qa05.dev.findora.org:8545",
+            accounts: ["0x4d05b965f821ea900ddd995dfa1b6caa834eaaa1ebe100a9760baf9331aae567"]
         }
     },
     abiExporter: {

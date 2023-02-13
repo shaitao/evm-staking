@@ -9,7 +9,7 @@ const axios = require("axios");
 const utils = require("./address_utils");
 
 async function main() {
-    let memo1 = { "desc": "a", "logo": "https://i.imgur.com/JfxwM7J.png", "name": "Koncrete Validator", "website": "Koncrete.org" };
+    let memo1 = { "desc": "a", "logo": "https://findora.org/wp-content/uploads/2023/02/logo.png", "name": "Validator", "website": "https://findora.org/" };
 
     const sa = "0x72488bAa718F52B76118C79168E55c209056A2E6";
 
